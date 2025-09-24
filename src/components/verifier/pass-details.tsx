@@ -66,7 +66,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
                  <CardDescription>{statusInfo.message}</CardDescription>
             </div>
             {isAllowed ? (
-                <Image src="/Opening Gate.gif" alt="Access Granted" width={64} height={64} unoptimized />
+                <Image src="/Opening Gate.gif" alt="Access Granted" width={96} height={96} unoptimized />
             ) : (
                 <statusInfo.icon className={`h-12 w-12 ${isAllowed ? 'text-green-600' : 'text-red-600'}`} />
             )}
