@@ -4,14 +4,14 @@ import { useState } from "react";
 import GenerateStandardForm from "@/components/forms/generate-standard-form";
 import GenerateVisitorForm from "@/components/forms/generate-visitor-form";
 import GenerateBatchForm from "@/components/forms/generate-batch-form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { Car, User, Bot } from "lucide-react";
+
+const passTypes = [
+    { id: 'standard', label: 'Standard', icon: Car },
+    { id: 'visitor', label: 'Visitor', icon: User },
+    { id: 'batch', label: 'Batch', icon: Bot },
+]
 
 export default function GeneratePassPage() {
   const [passType, setPassType] = useState("standard");
@@ -38,21 +38,27 @@ export default function GeneratePassPage() {
         </p>
       </div>
 
-      <div className="w-full max-w-sm space-y-2">
-        <Label htmlFor="pass-type-select">Pass Type</Label>
-        <Select value={passType} onValueChange={setPassType}>
-          <SelectTrigger id="pass-type-select" className="w-full">
-            <SelectValue placeholder="Select a pass type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="standard">Standard</SelectItem>
-            <SelectItem value="visitor">Visitor</SelectItem>
-            <SelectItem value="batch">Batch</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[240px_1fr]">
+        <div className="flex flex-col gap-2">
+            {passTypes.map((item) => (
+                 <button
+                    key={item.id}
+                    onClick={() => setPassType(item.id)}
+                    className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-left text-muted-foreground transition-all hover:text-primary",
+                        passType === item.id && "bg-muted text-primary"
+                    )}
+                    >
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                </button>
+            ))}
+        </div>
+        
+        <div className="md:col-start-2">
+          {renderForm()}
+        </div>
       </div>
-
-      <div className="mt-6">{renderForm()}</div>
     </div>
   );
 }
