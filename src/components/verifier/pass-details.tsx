@@ -14,6 +14,13 @@ interface PassDetailsProps {
 
 export default function PassDetails({ pass, isAdminSearch = false }: PassDetailsProps) {
 
+  useEffect(() => {
+    if (pass === "not_found" || (pass !== "not_found" && pass.expiresAt.toDate() < new Date())) {
+        const audio = new Audio('/denied.mp3');
+        audio.play().catch(error => console.error("Audio play failed:", error));
+    }
+  }, [pass]);
+
   if (pass === "not_found") {
     return (
        <Card className="border-red-500 bg-red-50 dark:bg-red-950/50">
@@ -39,6 +46,9 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
     if (isAllowed) {
       const audio = new Audio('/success.mp3');
       audio.play().catch(error => console.error("Audio play failed:", error));
+    } else {
+        const audio = new Audio('/denied.mp3');
+        audio.play().catch(error => console.error("Audio play failed:", error));
     }
   }, [isAllowed]);
   
