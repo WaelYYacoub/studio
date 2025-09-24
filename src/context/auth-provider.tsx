@@ -86,14 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (isOwner) {
         await setDoc(metaRef, { ownerSet: true }, { merge: true });
+        // Manually set user state for the owner to bypass onAuthStateChanged race condition
+        setUser({ uid, ...userProfile } as AppUser);
+        setRole(newUserRole);
       }
       
       if (newUserRole === 'pending') {
           await signOut(auth);
           router.push("/login?pending=1");
-      } else {
-        setUser({ uid, ...userProfile } as AppUser);
-        setRole(newUserRole);
       }
       
       return null;
@@ -111,21 +111,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleSignIn = async (email: string, pass: string) => {
     setLoading(true);
     try {
+      // 1. Sign in with Firebase Auth
       const cred = await signInWithEmailAndPassword(auth, email, pass);
       const uid = cred.user.uid;
 
+      // 2. Fetch Firestore profile
       const userRef = doc(db, "users", uid).withConverter(userConverter);
       const snap = await getDoc(userRef);
 
       if (!snap.exists()) {
         await signOut(auth);
-        throw new Error("No user profile found. Contact admin.");
+        throw new Error("No profile found. Contact administrator.");
       }
 
       const profile = snap.data();
 
+      // 3. Role check
       if (profile.role === "pending") {
         await signOut(auth);
+        // We don't throw an error here, but return a specific message
+        // The form will then redirect to the login page with a query param
         router.push("/login?pending=1");
         return "Your account is awaiting approval.";
       }
@@ -134,12 +139,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signOut(auth);
         throw new Error("Your account has been rejected.");
       }
+
+      // owner, admin, user all pass through
+      // onAuthStateChanged will handle setting state and redirection
       return null;
     } catch (error: any) {
       console.error("Signin error:", error);
-      setLoading(false);
+      setLoading(false); // Ensure loading is stopped on error
       return error.message || "An unknown error occurred.";
-    }
+    } 
+    // Do not set loading to false here, onAuthStateChanged will do it
   };
 
   const handleSignOut = async () => {
