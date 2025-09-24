@@ -2,9 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // This allows all origins in development, which is useful for cloud-based
-  // development environments. In a production build, this option has no effect.
-  allowedDevOrigins: ['**'],
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -32,11 +29,11 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https' as const,
         hostname: 'api.qrserver.com',
         port: '',
         pathname: '/**',
-      }
+      },
     ],
   },
 };
