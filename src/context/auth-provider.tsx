@@ -64,20 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const uid = userCredential.user.uid;
 
       // Owner bootstrap logic
-      const metaRef = doc(db, 'app/meta/config');
+      const metaRef = doc(db, 'app', 'config');
       const metaSnap = await getDoc(metaRef);
       const isOwner = !metaSnap.exists() || metaSnap.data().ownerSet !== true;
       
       const newUserRole = isOwner ? 'owner' : 'pending';
 
-      const userProfile: Omit<AppUser, 'id'> = {
-        uid,
+      const userProfile: Omit<AppUser, 'uid'> = {
         email,
         fullName,
-        phone,
-        company,
-        companyId,
-        workLocation,
+        phone: phone || "",
+        company: company || "",
+        companyId: companyId || "",
+        workLocation: workLocation || "",
         role: newUserRole,
         createdAt: serverTimestamp(),
         approvedBy: null,

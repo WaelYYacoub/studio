@@ -13,7 +13,7 @@ export interface AppUser {
   companyId?: string;
   workLocation?: string;
   role: Role;
-  createdAt: Timestamp;
+  createdAt: any;
   approvedBy?: string | null;
   approvedAt?: Timestamp | null;
 }
@@ -34,7 +34,7 @@ export interface BasePass {
   location: string;
   expiresAt: Timestamp;
   status: PassStatus;
-  createdAt: Timestamp;
+  createdAt: any;
   createdBy: string;
   createdByCompany?: string;
   qrPayload: QrPayload;
