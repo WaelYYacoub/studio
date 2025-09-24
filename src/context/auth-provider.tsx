@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection } from "firebase/firestore";
 import { auth, db, userConverter } from "@/lib/firestore";
 import type { AppUser, Role } from "@/types";
 
@@ -64,11 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const uid = userCredential.user.uid;
 
       // Owner bootstrap logic
-      const metaRef = doc(db, 'app', 'config');
-      const metaSnap = await getDoc(metaRef);
-      const isOwner = !metaSnap.exists() || metaSnap.data().ownerSet !== true;
-      
-      const newUserRole = isOwner ? 'owner' : 'pending';
+      const usersQuery = query(collection(db, 'users'));
+      const usersSnapshot = await getDocs(usersQuery);
+      const isFirstUser = usersSnapshot.empty;
+
+      const newUserRole = isFirstUser ? 'owner' : 'pending';
 
       const userProfile: Omit<AppUser, 'uid'> = {
         email,
@@ -84,10 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       await setDoc(doc(db, "users", uid), userProfile);
-      
-      if (isOwner) {
-        await setDoc(metaRef, { ownerSet: true }, { merge: true });
-      }
       
       // Don't auto-login pending users, redirect them.
       if (newUserRole === 'pending') {
@@ -107,12 +103,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleSignIn = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      const uid = cred.user.uid;
+
+      const userRef = doc(db, "users", uid).withConverter(userConverter);
+      const snap = await getDoc(userRef);
+
+      if (!snap.exists()) {
+        await signOut(auth);
+        throw new Error("No user profile found. Contact admin.");
+      }
+
+      const profile = snap.data();
+
+      if (profile.role === "pending") {
+        await signOut(auth);
+        throw new Error("Your account is awaiting approval.");
+      }
+
+      if (profile.role === "rejected") {
+        await signOut(auth);
+        throw new Error("Your account has been rejected.");
+      }
+
       // The onAuthStateChanged listener will handle redirection.
       return null;
     } catch (error: any) {
       console.error("Signin error:", error);
-       setLoading(false);
+      setLoading(false);
       return error.message || "An unknown error occurred.";
     }
   };
