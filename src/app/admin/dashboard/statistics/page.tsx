@@ -11,7 +11,7 @@ export default function StatisticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-headline text-3xl font-bold">Statistics</h1>
+        <h1 className="font-headline text-3xl font-bold">Pass Statistics</h1>
         <p className="text-muted-foreground">
           Visualize pass data and gain insights into usage patterns.
         </p>

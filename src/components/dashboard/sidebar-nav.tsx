@@ -25,7 +25,7 @@ const navItems = [
   { href: "/admin/dashboard/generate", label: "Generate Pass", icon: PlusCircle },
   { href: "/admin/dashboard/records", label: "All Pass Records", icon: ListOrdered },
   { href: "/admin/dashboard/search", label: "Pass Search", icon: Search },
-  { href: "/admin/dashboard/statistics", label: "Statistics", icon: BarChart2 },
+  { href: "/admin/dashboard/statistics", label: "Pass Statistics", icon: BarChart2 },
   {
     href: "/admin/dashboard/users",
     label: "Users",
