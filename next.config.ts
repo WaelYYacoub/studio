@@ -2,6 +2,11 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    // This allows all origins in development, which is useful for cloud-based
+    // development environments. In a production build, this option has no effect.
+    allowedDevOrigins: ['**'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
