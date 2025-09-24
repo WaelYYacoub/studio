@@ -4,14 +4,14 @@ import { useState } from "react";
 import GenerateStandardForm from "@/components/forms/generate-standard-form";
 import GenerateVisitorForm from "@/components/forms/generate-visitor-form";
 import GenerateBatchForm from "@/components/forms/generate-batch-form";
-import { Car, User, Bot } from "lucide-react";
+import { Car, User, FileUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const passTypes = [
     { id: 'standard', label: 'Standard', icon: Car },
     { id: 'visitor', label: 'Visitor', icon: User },
-    { id: 'batch', label: 'Batch', icon: Bot },
+    { id: 'batch', label: 'Batch Upload', icon: FileUp },
 ]
 
 export default function GeneratePassPage() {

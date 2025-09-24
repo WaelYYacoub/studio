@@ -1,24 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Upload, FileText, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { UploadCloud, FileText, CheckCircle, XCircle, Download, FileUp, Loader2 } from 'lucide-react';
 
 export default function GenerateBatchForm() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      setFile(event.target.files[0]);
+      const selectedFile = event.target.files[0];
+      if (selectedFile && selectedFile.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+        setFile(selectedFile);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Invalid File Type",
+          description: "Please select a valid .xlsx file.",
+        });
+        setFile(null);
+      }
     }
   };
+  
+  const handleDownloadSample = () => {
+    // In a real app, you would provide a static file or generate one.
+    const sampleHeader = "plateAlpha,plateNum,ownerName,expiresAt,serial,ownerCompany,location\n";
+    const sampleRow = "ABC,1234,John Doe,2025-12-31,SN-12345,Acme Inc.,SEC 01\n";
+    const blob = new Blob([sampleHeader, sampleRow], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "sample-batch.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -42,45 +65,49 @@ export default function GenerateBatchForm() {
     setTimeout(() => {
         setIsProcessing(false);
         setFile(null);
+        if(fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
     }, 2000);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Batch Pass Generation</CardTitle>
-        <CardDescription>
-          Upload an .xlsx file to create multiple standard passes at once.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <Alert>
-          <FileText className="h-4 w-4"/>
-          <AlertTitle>File Format</AlertTitle>
-          <AlertDescription>
-            Your .xlsx file must contain the following columns: `plateAlpha`, `plateNum`, `ownerName`, `expiresAt`, `serial`, `ownerCompany`, `location`. The `expiresAt` column should be in `YYYY-MM-DD` format.
-          </AlertDescription>
-        </Alert>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="batch-file">Excel File (.xlsx)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="batch-file"
-                type="file"
-                accept=".xlsx"
-                onChange={handleFileChange}
-                disabled={isProcessing}
-                className="file:text-primary file:font-semibold"
-              />
+    <div className="space-y-6">
+        <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 p-8 text-center">
+            <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold text-foreground">Upload Batch File</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+                Your .xlsx file must contain: `plateAlpha`, `plateNum`, `ownerName`, `expiresAt` (YYYY-MM-DD), `serial`, `ownerCompany`, `location`.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+                 <Button type="button" variant="destructive" onClick={handleDownloadSample}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Sample
+                </Button>
+                <Button type="button" onClick={() => fileInputRef.current?.click()}>
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Choose File
+                </Button>
+                 <input 
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    onChange={handleFileChange}
+                 />
             </div>
-             {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
-          </div>
-          <Button type="submit" disabled={!file || isProcessing} className="w-full">
-            {isProcessing ? "Processing..." : <><Upload className="mr-2 h-4 w-4" /> Upload and Process</>}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            {file && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>{file.name}</span>
+                </div>
+            )}
+        </div>
+
+        <Button onClick={handleSubmit} type="submit" disabled={!file || isProcessing} className="w-full text-base py-6">
+            {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <FileUp className="mr-2 h-5 w-5" />}
+            {isProcessing ? "Processing Batch File..." : "Process Batch File"}
+        </Button>
+    </div>
   );
 }
