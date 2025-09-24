@@ -60,7 +60,7 @@ export default function VerifierPage() {
 
           <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
              <DialogTrigger asChild>
-                <Button variant="outline" size="lg" className="w-full">
+                <Button size="lg" className="w-full">
                     <QrCode className="mr-2 h-5 w-5" />
                     Scan QR Code
                 </Button>
