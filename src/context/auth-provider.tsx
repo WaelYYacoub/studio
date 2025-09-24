@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection, query, where } from "firebase/firestore";
 import { auth, db, userConverter } from "@/lib/firestore";
 import type { AppUser, Role } from "@/types";
 
@@ -60,10 +60,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const { email, password, fullName, phone, company, companyId, workLocation } = data;
+      
+      const existingUserQuery = query(collection(db, "users"), where("email", "==", email), limit(1));
+      const existingUserSnapshot = await getDocs(existingUserQuery);
+      if (!existingUserSnapshot.empty) {
+        return "An account with this email already exists in Firestore. Please use the reset script or a different email.";
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // Owner bootstrap logic
       const usersQuery = query(collection(db, 'users'));
       const usersSnapshot = await getDocs(usersQuery);
       const isFirstUser = usersSnapshot.empty;
@@ -85,10 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await setDoc(doc(db, "users", uid), userProfile);
       
-      // Don't auto-login pending users, redirect them.
       if (newUserRole === 'pending') {
           await signOut(auth);
           router.push("/login?pending=1");
+      } else {
+        setUser({ uid, ...userProfile } as AppUser);
+        setRole(newUserRole);
       }
       
       return null;
@@ -118,15 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profile.role === "pending") {
         await signOut(auth);
-        throw new Error("Your account is awaiting approval.");
+        router.push("/login?pending=1");
+        return "Your account is awaiting approval.";
       }
 
       if (profile.role === "rejected") {
         await signOut(auth);
         throw new Error("Your account has been rejected.");
       }
-
-      // The onAuthStateChanged listener will handle redirection.
       return null;
     } catch (error: any) {
       console.error("Signin error:", error);
