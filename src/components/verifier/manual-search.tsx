@@ -107,7 +107,7 @@ export default function ManualSearch({ isAdminSearch = false }: ManualSearchProp
               )}
               Search
             </Button>
-            <Button type="button" variant="outline" onClick={handleReset} className="flex-1">
+            <Button type="button" variant="destructive" onClick={handleReset} className="flex-1">
                 Reset
             </Button>
           </div>
