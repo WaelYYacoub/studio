@@ -22,8 +22,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/admin/dashboard/records", label: "All Pass Records", icon: ListOrdered },
   { href: "/admin/dashboard/generate", label: "Generate Pass", icon: PlusCircle },
+  { href: "/admin/dashboard/records", label: "All Pass Records", icon: ListOrdered },
   { href: "/admin/dashboard/search", label: "Search", icon: Search },
   { href: "/admin/dashboard/statistics", label: "Statistics", icon: BarChart2 },
   {
