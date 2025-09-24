@@ -88,6 +88,7 @@ export default function GenerateVisitorForm() {
         status: "active",
         createdAt: serverTimestamp(),
         createdBy: user.uid,
+        createdByName: user.fullName,
         createdByCompany: user.company,
       };
 

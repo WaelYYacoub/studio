@@ -36,6 +36,7 @@ export interface BasePass {
   status: PassStatus;
   createdAt: any;
   createdBy: string;
+  createdByName: string;
   createdByCompany?: string;
   qrPayload: QrPayload;
 }

@@ -56,6 +56,7 @@ export const passConverter: FirestoreDataConverter<Pass> = {
             status: data.status,
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt : new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds),
             createdBy: data.createdBy,
+            createdByName: data.createdByName,
             createdByCompany: data.createdByCompany,
             qrPayload: data.qrPayload,
         };

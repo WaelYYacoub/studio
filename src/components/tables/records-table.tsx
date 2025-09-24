@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import type { Pass, PassStatus } from "@/types";
 import {
   Table,
@@ -25,7 +25,7 @@ import { useData } from "@/context/data-provider";
 const PAGE_SIZE = 10;
 
 export function RecordsTable() {
-  const { passes: allPasses, loading: dataLoading } = useData();
+  const { passes: allPasses, users, loading: dataLoading } = useData();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     company: "",
@@ -128,7 +128,7 @@ export function RecordsTable() {
               <TableHead>Company</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Expires At</TableHead>
-              <TableHead>Created At</TableHead>
+              <TableHead>Created By</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -142,31 +142,34 @@ export function RecordsTable() {
                 </TableCell>
               </TableRow>
             ) : paginatedPasses.length > 0 ? (
-              paginatedPasses.map((pass) => (
-                <TableRow key={pass.id}>
-                  <TableCell className="font-medium">
-                    {pass.plateAlpha}-{pass.plateNum}
-                  </TableCell>
-                  <TableCell>
-                    {pass.type === "standard" ? pass.ownerName : pass.visitorName}
-                  </TableCell>
-                  <TableCell>
-                    {pass.type === "standard" ? pass.ownerCompany : pass.createdByCompany}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(pass.status)}>{pass.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {format(pass.expiresAt.toDate(), "PP")}
-                  </TableCell>
-                  <TableCell>
-                    {format(pass.createdAt.toDate(), "PP")}
-                  </TableCell>
-                  <TableCell>
-                    <RecordsTableActions pass={pass} />
-                  </TableCell>
-                </TableRow>
-              ))
+              paginatedPasses.map((pass) => {
+                const creator = users.find(u => u.uid === pass.createdBy);
+                return (
+                  <TableRow key={pass.id}>
+                    <TableCell className="font-medium">
+                      {pass.plateAlpha}-{pass.plateNum}
+                    </TableCell>
+                    <TableCell>
+                      {pass.type === "standard" ? pass.ownerName : pass.visitorName}
+                    </TableCell>
+                    <TableCell>
+                      {pass.type === "standard" ? pass.ownerCompany : pass.createdByCompany}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusVariant(pass.status)}>{pass.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {format(pass.expiresAt.toDate(), "PP")}
+                    </TableCell>
+                    <TableCell>
+                      {creator?.fullName || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <RecordsTableActions pass={pass} />
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">

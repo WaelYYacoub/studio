@@ -79,6 +79,7 @@ export default function GenerateStandardForm() {
         status: "active",
         createdAt: serverTimestamp(),
         createdBy: user.uid,
+        createdByName: user.fullName,
         createdByCompany: user.company,
       };
 
