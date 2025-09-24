@@ -28,7 +28,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
 
     if (printWindow && printContent) {
         printWindow.document.write(`<html><head><title>Print Pass</title>`);
-        printWindow.document.write('<style>body { font-family: sans-serif; } .print-card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; max-width: 400px; margin: 20px auto; } h2 { text-align: center; } .details { display: grid; grid-template-columns: 100px 1fr; gap: 8px; } .qr-code { text-align: center; margin-top: 16px; } img { max-width: 150px; margin: auto; }</style>');
+        printWindow.document.write('<style>body { font-family: sans-serif; } .print-card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; max-width: 400px; margin: 20px auto; } h2 { text-align: center; } .details { display: grid; grid-template-columns: 100px 1fr; gap: 8px; } .qr-code-container { border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-top: 16px; text-align: center; } img { max-width: 150px; margin: auto; }</style>');
         printWindow.document.write('</head><body>');
         printWindow.document.write(printContent.innerHTML);
         printWindow.document.write('</body></html>');
@@ -84,7 +84,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     <span>{format(pass.expiresAt, "PPP, p")}</span>
                 </div>
 
-                <div className="qr-code mt-6 text-center">
+                <div className="qr-code-container mt-6 text-center border rounded-lg p-4">
                     <QrCodeDisplay payload={pass.qrPayload} />
                     <p className="text-xs text-muted-foreground mt-2">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
