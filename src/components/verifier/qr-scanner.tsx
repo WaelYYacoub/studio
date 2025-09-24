@@ -81,7 +81,7 @@ export default function QrScanner() {
           ) : (
             <QrCode className="mr-2 h-4 w-4" />
           )}
-          {isLoading ? "Scanning..." : "Simulate QR Scan"}
+          {isLoading ? "Scanning..." : "QR Code Scanner"}
         </Button>
       </div>
 
