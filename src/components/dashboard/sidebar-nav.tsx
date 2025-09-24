@@ -62,7 +62,7 @@ export default function SidebarNav() {
          <p className="text-sm text-muted-foreground">Welcome, {user?.fullName}</p>
       </div>
       <nav className="flex-1 space-y-1 p-4">
-        <Link href="/verifier" target="_blank">
+        <Link href="/verifier">
           <button
             className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted`}
           >
