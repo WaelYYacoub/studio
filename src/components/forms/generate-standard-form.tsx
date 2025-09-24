@@ -29,7 +29,7 @@ import type { StandardPass, Pass } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 const formSchema = z.object({
-  plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[A-Z]+$/, "Only uppercase letters"),
+  plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
   plateNum: z.string().min(1, "Required").max(5, "Max 5 digits").regex(/^\d+$/, "Only numbers"),
   ownerName: z.string().min(2, "Required"),
   serial: z.string().min(1, "Required"),

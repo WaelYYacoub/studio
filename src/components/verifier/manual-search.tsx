@@ -14,7 +14,7 @@ import { Loader2, Search } from "lucide-react";
 import PassDetails from "./pass-details";
 
 const formSchema = z.object({
-  plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[A-Z]+$/, "Only uppercase letters"),
+  plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
   plateNum: z.string().min(1, "Required").max(5, "Max 5 digits").regex(/^\d+$/, "Only numbers"),
 });
 
