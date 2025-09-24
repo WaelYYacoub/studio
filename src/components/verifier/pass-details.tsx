@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, XCircle, Clock, ShieldQuestion } from "lucide-react";
 import type { Pass } from "@/types";
 import { format } from "date-fns";
+import Image from "next/image";
 
 interface PassDetailsProps {
   pass: Pass | "not_found";
@@ -60,7 +61,11 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
     <Card className={isAllowed ? "border-green-500" : "border-red-500"}>
        <CardHeader>
         <div className="flex items-center gap-3">
-            <statusInfo.icon className={`h-8 w-8 ${isAllowed ? 'text-green-600' : 'text-red-600'}`} />
+            {isAllowed ? (
+                <Image src="/Opening Gate.gif" alt="Access Granted" width={48} height={48} unoptimized />
+            ) : (
+                <statusInfo.icon className={`h-8 w-8 ${isAllowed ? 'text-green-600' : 'text-red-600'}`} />
+            )}
             <div>
                  <CardTitle className={isAllowed ? 'text-green-700' : 'text-red-700'}>{statusInfo.title}</CardTitle>
                  <CardDescription>{statusInfo.message}</CardDescription>
