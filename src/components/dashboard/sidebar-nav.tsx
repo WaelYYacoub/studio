@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronDown,
   LayoutDashboard,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "../ui/button";
@@ -50,6 +51,15 @@ export default function SidebarNav() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 p-4">
+        <Link href="/verifier" target="_blank">
+          <button
+            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted`}
+          >
+            <ShieldAlert className="h-4 w-4" />
+            <span>Public Verifier</span>
+          </button>
+        </Link>
+
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
           <CollapsibleTrigger asChild>
              <Button variant="ghost" className="w-full justify-between">

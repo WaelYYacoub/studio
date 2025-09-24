@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Image from 'next/image';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -14,6 +15,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <p className="mt-1 text-muted-foreground">Secure Access Management</p>
         </div>
         {children}
+         <div className="mt-6 text-center">
+          <Link href="/verifier" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
+            <ShieldAlert className="h-5 w-5" />
+            <span>Public Pass Verifier</span>
+          </Link>
+        </div>
       </div>
     </div>
   );
