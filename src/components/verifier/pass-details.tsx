@@ -16,17 +16,19 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
 
   if (pass === "not_found") {
     return (
-      <Alert variant="destructive">
-        <div className="flex items-center justify-between">
-            <div>
-                <AlertTitle>Pass Not Found</AlertTitle>
-                <AlertDescription>
-                No active pass found for this plate number. Please check the details and try again.
-                </AlertDescription>
+       <Card className="border-red-500">
+        <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <CardTitle className="text-red-700">Pass Not Found</CardTitle>
+                    <CardDescription>
+                        No active pass found for this plate number. Please check the details and try again.
+                    </CardDescription>
+                </div>
+                <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
             </div>
-            <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
-        </div>
-      </Alert>
+        </CardHeader>
+      </Card>
     );
   }
   
@@ -36,17 +38,19 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   // For public verifier, only show allowed/denied. Admin sees all statuses.
   if (!isAdminSearch && !isAllowed) {
      return (
-      <Alert variant="destructive">
-        <div className="flex items-center justify-between">
-            <div>
-                <AlertTitle>Access Denied</AlertTitle>
-                <AlertDescription>
-                This pass is not currently active or has expired.
-                </AlertDescription>
+       <Card className="border-red-500">
+        <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <CardTitle className="text-red-700">Access Denied</CardTitle>
+                    <CardDescription>
+                        This pass is not currently active or has expired.
+                    </CardDescription>
+                </div>
+                <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
             </div>
-            <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
-        </div>
-      </Alert>
+        </CardHeader>
+      </Card>
     );
   }
 
