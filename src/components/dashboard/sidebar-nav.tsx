@@ -20,6 +20,7 @@ import RoleGate from "../auth/role-gate";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 
 const navItems = [
   { href: "/admin/dashboard/generate", label: "Generate Pass", icon: PlusCircle },
@@ -38,6 +39,14 @@ export default function SidebarNav() {
   const pathname = usePathname();
   const { user, handleSignOut } = useAuth();
   const [isOpen, setIsOpen] = useState(true);
+  
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length > 1) {
+        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -45,10 +54,12 @@ export default function SidebarNav() {
         <div className="flex items-center gap-2">
             <ShieldCheck className="w-8 h-8 text-primary" />
             <div>
-                <p className="font-headline text-lg font-semibold">GuardianGate</p>
-                <p className="text-xs text-muted-foreground -mt-1">Welcome, {user?.fullName?.split(' ')[0]}</p>
+                <p className="font-headline text-lg font-semibold">Guardian</p>
             </div>
         </div>
+      </div>
+      <div className="p-4 border-b">
+         <p className="text-sm text-muted-foreground">Welcome, {user?.fullName}</p>
       </div>
       <nav className="flex-1 space-y-1 p-4">
         <Link href="/verifier" target="_blank">
@@ -56,7 +67,7 @@ export default function SidebarNav() {
             className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted`}
           >
             <ShieldAlert className="h-4 w-4" />
-            <span>Pass Verifier</span>
+            <span>Verifier</span>
           </button>
         </Link>
 
@@ -98,6 +109,11 @@ export default function SidebarNav() {
       </nav>
       <div className="p-4 border-t mt-auto">
           <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start">
+            {user && (
+                <Avatar className="h-6 w-6 mr-2">
+                    <AvatarFallback className="text-xs">{getInitials(user.fullName)}</AvatarFallback>
+                </Avatar>
+            )}
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>

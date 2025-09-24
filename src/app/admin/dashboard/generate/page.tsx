@@ -4,8 +4,9 @@ import { useState } from "react";
 import GenerateStandardForm from "@/components/forms/generate-standard-form";
 import GenerateVisitorForm from "@/components/forms/generate-visitor-form";
 import GenerateBatchForm from "@/components/forms/generate-batch-form";
-import { cn } from "@/lib/utils";
 import { Car, User, Bot } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const passTypes = [
     { id: 'standard', label: 'Standard', icon: Car },
@@ -30,35 +31,37 @@ export default function GeneratePassPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-headline text-3xl font-bold">Generate Pass</h1>
+    <div className="space-y-6 mx-auto max-w-2xl">
+      <div className="text-center md:text-left">
+        <h1 className="font-headline text-3xl font-bold">Create New Gate Pass</h1>
         <p className="text-muted-foreground">
-          Create a new gate pass for standard vehicles, visitors, or a batch of vehicles.
+          Fill in the details to generate a new pass.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-[240px_1fr]">
-        <div className="flex flex-col gap-2">
-            {passTypes.map((item) => (
-                 <button
-                    key={item.id}
-                    onClick={() => setPassType(item.id)}
-                    className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-left text-muted-foreground transition-all hover:text-primary",
-                        passType === item.id && "bg-muted text-primary"
-                    )}
-                    >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
-                </button>
-            ))}
-        </div>
-        
-        <div className="md:col-start-2">
-          {renderForm()}
-        </div>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+            <div className="space-y-2 mb-6">
+                 <label className="text-sm font-medium">Pass Type</label>
+                <Select value={passType} onValueChange={setPassType}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select pass type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {passTypes.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                                <div className="flex items-center gap-2">
+                                    <item.icon className="h-4 w-4" />
+                                    <span>{item.label}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            {renderForm()}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -33,6 +33,7 @@ import { buildQrPayload } from "@/lib/qr";
 import { useState } from "react";
 import PassPreviewDialog from "./pass-preview-dialog";
 import type { VisitorPass, Pass } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 const formSchema = z.object({
   plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[A-Z]+$/, "Only uppercase letters"),
@@ -110,147 +111,142 @@ export default function GenerateVisitorForm() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Visitor Pass</CardTitle>
-          <CardDescription>
-            For temporary visitors with a specific purpose and short-term access.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <FormField
-                  control={form.control}
-                  name="plateAlpha"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Plate Alpha</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ABC" {...field} style={{textTransform: 'uppercase'}}/>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="plateNum"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Plate Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="1234" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-               <FormField
-                  control={form.control}
-                  name="visitorName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Visitor Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ali" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="personToVisit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Person to Visit</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Facility Manager" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="purpose"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Purpose</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Maintenance" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Pump Station" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="expiresAt"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Expires At</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <Button type="submit" disabled={isSubmitting || userLoading} className="w-full">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Pass
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+              control={form.control}
+              name="plateAlpha"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plate Alpha</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ABC" {...field} style={{textTransform: 'uppercase'}}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+              <FormField
+              control={form.control}
+              name="plateNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plate Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="1234" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+            <FormField
+              control={form.control}
+              name="visitorName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Visitor's Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ali" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          <FormField
+            control={form.control}
+            name="personToVisit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Person to Visit</FormLabel>
+                <FormControl>
+                  <Input placeholder="Facility Manager" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="purpose"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purpose</FormLabel>
+                <FormControl>
+                  <Input placeholder="Maintenance" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Location</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="Pump Station A">Pump Station A</SelectItem>
+                            <SelectItem value="Refinery">Refinery</SelectItem>
+                            <SelectItem value="HQ">HQ</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="expiresAt"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Valid Until</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={isSubmitting || userLoading} className="w-full">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Pass
+          </Button>
+        </form>
+      </Form>
       {generatedPass && (
         <PassPreviewDialog 
           pass={generatedPass} 
