@@ -185,7 +185,7 @@ export default function QrScanner() {
               The access status for the scanned pass is shown below.
             </DialogDescription>
           </DialogHeader>
-          {passResult && <PassDetails pass={passResult} />}
+          {passResult && <PassDetails pass={passResult} isAdminSearch={false} />}
         </DialogContent>
       </Dialog>
     </div>
