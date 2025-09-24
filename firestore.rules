@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function userDoc(uid) { return get(/databases/$(db)/documents/users/$(uid)); }
+    function role() { return isSignedIn() ? userDoc(request.auth.uid).data.role : "anon"; }
+    function isOwner() { return role() == "owner"; }
+    function isAdmin() { return role() in ["owner", "admin"]; }
+    function isUser()  { return role() in ["owner", "admin", "user"]; }
+
+    // USERS
+    match /users/{uid} {
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow update: if isSignedIn() && (
+          // self can update phone, company, workLocation only
+          (request.auth.uid == uid && request.resource.data.diff(resource.data).changedKeys().hasOnly(["phone","company","workLocation"]))
+          || isAdmin() // admins can set role, approvals
+      );
+      allow delete: if false;
+    }
+
+    // PASSES
+    match /passes/{id} {
+      // Public verifier: only by exact plate AND only active AND not expired
+      allow list: if !isSignedIn() &&
+        request.query.limit <= 1 &&
+        request.query.orderBy.size() == 0 &&
+        request.query.where("plateAlpha", "==", request.query.get("plateAlpha")) &&
+        request.query.where("plateNum", "==", request.query.get("plateNum")) &&
+        request.query.where("status", "==", "active");
+
+      allow get: if !isSignedIn() && resource.data.status == "active" && resource.data.expiresAt > request.time;
+
+      // Authenticated CRUD
+      allow create: if isUser();
+      allow read:   if isUser();
+      allow update: if isUser() &&
+        // creator can edit their own non-expired passes; admin can edit any
+        ((resource.data.createdBy == request.auth.uid && resource.data.expiresAt > request.time) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // META
+    match /app/meta/{doc} {
+      allow read: if true; // needed at signup time
+      allow write: if isOwner();
+    }
+  }
+}

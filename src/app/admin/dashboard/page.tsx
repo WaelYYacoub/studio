@@ -3,16 +3,16 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/login");
+    router.replace("/admin/dashboard/records");
   }, [router]);
 
   return (
-     <div className="flex h-screen w-full items-center justify-center">
-      <p>Redirecting to login...</p>
+    <div className="flex h-full items-center justify-center">
+      <p>Loading dashboard...</p>
     </div>
   );
 }
