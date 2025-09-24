@@ -31,8 +31,12 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
     const printWindow = window.open(windowUrl, windowName, 'left=50000,top=50000,width=0,height=0');
 
     if (printWindow && printContent) {
-        printWindow.document.write(`<html><head><title>Print Pass</title>`);
-        printWindow.document.write('<style>body { font-family: sans-serif; } .print-card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; max-width: 400px; margin: 20px auto; text-align: center; } h2 { text-align: center; } .details { display: grid; grid-template-columns: 100px 1fr; gap: 8px; text-align: left; } .qr-code-container { border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-top: 16px; display: inline-flex; flex-direction: column; align-items: center; gap: 8px; } img { max-width: 150px; margin: auto; }</style>');
+        printWindow.document.write(`<html><head><title>Print Pass</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+        `);
+        printWindow.document.write('<style>body { font-family: "Inter", sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .print-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; max-width: 400px; margin: 20px auto; text-align: center; background-color: #fff; } h2 { font-family: "Space Grotesk", sans-serif; font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 1rem; color: #111827; } .details { display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem 1rem; text-align: left; font-size: 0.875rem; } .details-label { font-weight: 600; color: #6b7280; } .details-value { text-transform: capitalize; } .details-value.status-active { color: #16a34a; font-weight: 700; } .qr-container { margin-top: 1.5rem; display: inline-flex; flex-direction: column; align-items: center; gap: 0.5rem; border-radius: 0.5rem; border: 1px solid #f3f4f6; padding: 1rem; } .qr-plate { font-size: 0.75rem; color: #6b7280; } img { max-width: 150px; margin: auto; border-radius: 0.5rem; } </style>');
         printWindow.document.write('</head><body>');
         printWindow.document.write(printContent.innerHTML);
         printWindow.document.write('</body></html>');
@@ -98,37 +102,37 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     {pass.plateAlpha} {pass.plateNum}
                 </h2>
                 <div className="details grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 text-sm text-left">
-                    <span className="font-semibold text-muted-foreground">Status:</span>
-                    <span className="font-bold text-green-600 capitalize">{pass.status}</span>
+                    <span className="details-label font-semibold text-muted-foreground">Status:</span>
+                    <span className="details-value status-active font-bold text-green-600 capitalize">{pass.status}</span>
 
-                    <span className="font-semibold text-muted-foreground">Type:</span>
-                    <span className="capitalize">{pass.type}</span>
+                    <span className="details-label font-semibold text-muted-foreground">Type:</span>
+                    <span className="details-value capitalize">{pass.type}</span>
 
                     {pass.type === "standard" && (
                         <>
-                            <span className="font-semibold text-muted-foreground">Owner:</span>
-                            <span>{pass.ownerName}</span>
-                            <span className="font-semibold text-muted-foreground">Company:</span>
-                            <span>{pass.ownerCompany}</span>
+                            <span className="details-label font-semibold text-muted-foreground">Owner:</span>
+                            <span className="details-value">{pass.ownerName}</span>
+                            <span className="details-label font-semibold text-muted-foreground">Company:</span>
+                            <span className="details-value">{pass.ownerCompany}</span>
                         </>
                     )}
 
                     {pass.type === "visitor" && (
                          <>
-                            <span className="font-semibold text-muted-foreground">Visitor:</span>
-                            <span>{pass.visitorName}</span>
-                            <span className="font-semibold text-muted-foreground">Purpose:</span>
-                            <span>{pass.purpose}</span>
+                            <span className="details-label font-semibold text-muted-foreground">Visitor:</span>
+                            <span className="details-value">{pass.visitorName}</span>
+                            <span className="details-label font-semibold text-muted-foreground">Purpose:</span>
+                            <span className="details-value">{pass.purpose}</span>
                         </>
                     )}
 
-                    <span className="font-semibold text-muted-foreground">Expires:</span>
-                    <span>{format(pass.expiresAt, "PPP, p")}</span>
+                    <span className="details-label font-semibold text-muted-foreground">Expires:</span>
+                    <span className="details-value" style={{textTransform: 'none'}}>{format(pass.expiresAt, "PPP, p")}</span>
                 </div>
 
-                <div className="mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4">
+                <div className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4">
                     <QrCodeDisplay payload={pass.qrPayload} />
-                    <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
+                    <p className="qr-plate text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
             </div>
         </div>
