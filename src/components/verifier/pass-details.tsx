@@ -9,6 +9,9 @@ import QrCodeDisplay from "../ui/qr-code";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useRef, useCallback } from "react";
+import { toPng } from 'html-to-image';
+
 
 interface PassDetailsProps {
   pass: Pass | "not_found";
@@ -17,6 +20,7 @@ interface PassDetailsProps {
 
 export default function PassDetails({ pass, isAdminSearch = false }: PassDetailsProps) {
   const { toast } = useToast();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   if (pass === "not_found") {
     return (
@@ -30,8 +34,6 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
     );
   }
   
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(JSON.stringify(pass.qrPayload))}`;
-
   const isExpired = pass.expiresAt.toDate() < new Date();
   const isAllowed = pass.status === "active" && !isExpired;
   
@@ -63,25 +65,24 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
 
   const statusInfo = getStatusInfo();
 
-   const handleDownload = async () => {
-    try {
-        const response = await fetch(qrUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        toast({ title: "Success", description: "QR code downloaded." });
-    } catch (error) {
-        console.error("Download failed", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not download QR code." });
+   const handleDownload = useCallback(() => {
+    if (cardRef.current === null) {
+      return;
     }
-  };
+
+    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff', style: { borderRadius: '0', boxShadow: 'none' } })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast({ title: "Success", description: "QR code card downloaded." });
+      })
+      .catch((err) => {
+        console.error(err);
+        toast({ variant: "destructive", title: "Error", description: "Could not download QR code card." });
+      });
+  }, [cardRef, pass, toast]);
 
   const handleShare = async () => {
     const shareData = {
@@ -160,16 +161,18 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
         <Separator />
          <div className="text-center">
             <div className="inline-flex flex-col items-center gap-4">
-                <div className="inline-flex flex-col items-center gap-2 rounded-lg border p-4">
+                <div ref={cardRef} className="inline-flex flex-col items-center gap-2 rounded-lg border bg-white p-4">
                     <QrCodeDisplay payload={pass.qrPayload} />
                     <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleShare}>
-                        <Share2 className="mr-2 h-3 w-3" /> Share
+                    <Button variant="outline" size="icon" onClick={handleShare}>
+                        <Share2 className="h-4 w-4" />
+                        <span className="sr-only">Share</span>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleDownload}>
-                        <Download className="mr-2 h-3 w-3" /> Download
+                    <Button variant="outline" size="icon" onClick={handleDownload}>
+                        <Download className="h-4 w-4" />
+                        <span className="sr-only">Download</span>
                     </Button>
                 </div>
             </div>

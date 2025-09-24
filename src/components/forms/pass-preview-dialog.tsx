@@ -12,6 +12,9 @@ import { format } from "date-fns";
 import QrCodeDisplay from "../ui/qr-code";
 import { Share2, Download, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRef, useCallback } from "react";
+import { toPng } from 'html-to-image';
+
 
 interface PassPreviewDialogProps {
   pass: Pass;
@@ -21,7 +24,8 @@ interface PassPreviewDialogProps {
 
 export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPreviewDialogProps) {
   const { toast } = useToast();
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(JSON.stringify(pass.qrPayload))}`;
+  const printRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
     const printContent = document.getElementById('print-area-dialog');
@@ -47,25 +51,25 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
     }
   };
 
-  const handleDownload = async () => {
-    try {
-        const response = await fetch(qrUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        toast({ title: "Success", description: "QR code downloaded." });
-    } catch (error) {
-        console.error("Download failed", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not download QR code." });
+  const handleDownload = useCallback(() => {
+    if (cardRef.current === null) {
+      return;
     }
-  };
+
+    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff', style: { borderRadius: '0', boxShadow: 'none' } })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast({ title: "Success", description: "QR code card downloaded." });
+      })
+      .catch((err) => {
+        console.error(err);
+        toast({ variant: "destructive", title: "Error", description: "Could not download QR code card." });
+      });
+  }, [cardRef, pass, toast]);
+
 
   const handleShare = async () => {
     const shareData = {
@@ -96,7 +100,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
           </DialogDescription>
         </DialogHeader>
 
-        <div id="print-area-dialog" className="py-4">
+        <div id="print-area-dialog" ref={printRef} className="py-4">
              <div className="print-card text-center">
                  <h2 className="text-2xl font-bold font-headline text-center mb-4">
                     {pass.plateAlpha} {pass.plateNum}
@@ -130,7 +134,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     <span className="details-value" style={{textTransform: 'none'}}>{format(pass.expiresAt, "PPP, p")}</span>
                 </div>
 
-                <div className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4">
+                <div ref={cardRef} className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4 bg-white">
                     <QrCodeDisplay payload={pass.qrPayload} />
                     <p className="qr-plate text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
