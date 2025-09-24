@@ -2,6 +2,8 @@ import { ShieldCheck, QrCode } from 'lucide-react';
 import ManualSearch from '@/components/verifier/manual-search';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import QrScanner from '@/components/verifier/qr-scanner';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function VerifierPage() {
   return (
@@ -12,6 +14,9 @@ export default function VerifierPage() {
                 <ShieldCheck className="h-7 w-7 text-primary" />
                 <span className="font-headline text-xl font-bold">GuardianGate Verifier</span>
               </div>
+               <Button asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
           </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
