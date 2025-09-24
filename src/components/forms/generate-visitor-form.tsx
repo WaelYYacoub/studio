@@ -42,7 +42,6 @@ const formSchema = z.object({
   personToVisit: z.string().min(1, "Required"),
   purpose: z.string().min(1, "Required"),
   location: z.string().min(1, "Required"),
-  expiresAt: z.date({ required_error: "Expiry date is required." }),
 });
 
 const locations = ["SEC 01", "SEC 02", "SEC 03", "SEC 04", "SEC 05", "SEC 06", "SEC 07", "SEC 08", "SEC 09", "SEC 10", "LD 01", "LD 02", "LD 03", "LD 04", "LD 05", "LD 06", "Pump Station"];
@@ -63,7 +62,6 @@ export default function GenerateVisitorForm() {
       personToVisit: "",
       purpose: "",
       location: "",
-      expiresAt: endOfDay(new Date()),
     },
   });
 
@@ -73,6 +71,8 @@ export default function GenerateVisitorForm() {
       return;
     }
     setIsSubmitting(true);
+    
+    const expiresAt = endOfDay(new Date());
 
     try {
       const passCollection = collection(db, "passes").withConverter(passConverter);
@@ -84,7 +84,7 @@ export default function GenerateVisitorForm() {
         personToVisit: values.personToVisit,
         purpose: values.purpose,
         location: values.location,
-        expiresAt: values.expiresAt,
+        expiresAt: expiresAt,
         status: "active",
         createdAt: serverTimestamp(),
         createdBy: user.uid,
@@ -96,9 +96,9 @@ export default function GenerateVisitorForm() {
       const finalPassData = {
         ...newPassData,
         id: docRef.id,
-        qrPayload: buildQrPayload(docRef.id, values.plateAlpha, values.plateNum, values.expiresAt),
+        qrPayload: buildQrPayload(docRef.id, values.plateAlpha, values.plateNum, expiresAt),
         createdAt: new Date(),
-        expiresAt: values.expiresAt,
+        expiresAt: expiresAt,
       };
 
       setGeneratedPass(finalPassData as Pass);
