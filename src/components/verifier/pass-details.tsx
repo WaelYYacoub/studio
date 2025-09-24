@@ -17,11 +17,15 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   if (pass === "not_found") {
     return (
       <Alert variant="destructive">
-        <XCircle className="h-4 w-4" />
-        <AlertTitle>Pass Not Found</AlertTitle>
-        <AlertDescription>
-          No active pass found for this plate number. Please check the details and try again.
-        </AlertDescription>
+        <div className="flex items-center justify-between">
+            <div>
+                <AlertTitle>Pass Not Found</AlertTitle>
+                <AlertDescription>
+                No active pass found for this plate number. Please check the details and try again.
+                </AlertDescription>
+            </div>
+            <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
+        </div>
       </Alert>
     );
   }
@@ -33,11 +37,15 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   if (!isAdminSearch && !isAllowed) {
      return (
       <Alert variant="destructive">
-        <XCircle className="h-4 w-4" />
-        <AlertTitle>Access Denied</AlertTitle>
-        <AlertDescription>
-          This pass is not currently active or has expired.
-        </AlertDescription>
+        <div className="flex items-center justify-between">
+            <div>
+                <AlertTitle>Access Denied</AlertTitle>
+                <AlertDescription>
+                This pass is not currently active or has expired.
+                </AlertDescription>
+            </div>
+            <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
+        </div>
       </Alert>
     );
   }
@@ -68,7 +76,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
             {isAllowed ? (
                 <Image src="/Opening Gate.gif" alt="Access Granted" width={96} height={96} unoptimized />
             ) : (
-                <statusInfo.icon className={`h-12 w-12 ${isAllowed ? 'text-green-600' : 'text-red-600'}`} />
+                <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
             )}
         </div>
       </CardHeader>
