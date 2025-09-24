@@ -7,7 +7,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/admin/dashboard/records");
+    router.replace("/admin/dashboard/generate");
   }, [router]);
 
   return (
