@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, XCircle, Clock, ShieldQuestion } from "lucide-react";
 import type { Pass } from "@/types";
 import { format } from "date-fns";
@@ -16,12 +15,12 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
 
   if (pass === "not_found") {
     return (
-       <Card className="border-red-500">
+       <Card className="border-red-500 bg-red-50 dark:bg-red-950/50">
         <CardHeader>
             <div className="flex items-center justify-between gap-3">
                 <div>
-                    <CardTitle className="text-red-700">Pass Not Found</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-red-700 dark:text-red-400">Pass Not Found</CardTitle>
+                    <CardDescription className="text-red-600 dark:text-red-400/80">
                         No active pass found for this plate number. Please check the details and try again.
                     </CardDescription>
                 </div>
@@ -35,15 +34,14 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   const isExpired = pass.expiresAt.toDate() < new Date();
   const isAllowed = pass.status === "active" && !isExpired;
   
-  // For public verifier, only show allowed/denied. Admin sees all statuses.
   if (!isAdminSearch && !isAllowed) {
      return (
-       <Card className="border-red-500">
+       <Card className="border-red-500 bg-red-50 dark:bg-red-950/50">
         <CardHeader>
             <div className="flex items-center justify-between gap-3">
                 <div>
-                    <CardTitle className="text-red-700">Access Denied</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-red-700 dark:text-red-400">Access Denied</CardTitle>
+                    <CardDescription className="text-red-600 dark:text-red-400/80">
                         This pass is not currently active or has expired.
                     </CardDescription>
                 </div>
@@ -70,12 +68,12 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   const statusInfo = getStatusInfo();
 
   return (
-    <Card className={isAllowed ? "border-green-500" : "border-red-500"}>
+    <Card className={isAllowed ? "border-green-500 bg-green-50 dark:bg-green-950/50" : "border-red-500 bg-red-50 dark:bg-red-950/50"}>
        <CardHeader>
         <div className="flex items-center justify-between gap-3">
             <div>
-                 <CardTitle className={isAllowed ? 'text-green-700' : 'text-red-700'}>{statusInfo.title}</CardTitle>
-                 <CardDescription>{statusInfo.message}</CardDescription>
+                 <CardTitle className={isAllowed ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>{statusInfo.title}</CardTitle>
+                 <CardDescription className={isAllowed ? 'text-green-600 dark:text-green-400/80' : 'text-red-600 dark:text-red-400/80'}>{statusInfo.message}</CardDescription>
             </div>
             {isAllowed ? (
                 <Image src="/Opening Gate.gif" alt="Access Granted" width={96} height={96} unoptimized />
