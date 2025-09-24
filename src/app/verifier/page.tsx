@@ -1,11 +1,23 @@
+
 import { ShieldCheck, QrCode } from 'lucide-react';
 import ManualSearch from '@/components/verifier/manual-search';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import QrScanner from '@/components/verifier/qr-scanner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useState } from 'react';
 
 export default function VerifierPage() {
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
   return (
     <div className="bg-secondary/30 min-h-screen">
       <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0">
@@ -44,15 +56,21 @@ export default function VerifierPage() {
             </div>
           </div>
 
-           <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><QrCode className="h-5 w-5"/> Scan QR Code</CardTitle>
-                <CardDescription>Use your device's camera to scan the pass QR code.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <QrScanner />
-            </CardContent>
-          </Card>
+          <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+             <DialogTrigger asChild>
+                <Button variant="outline" size="lg" className="w-full">
+                    <QrCode className="mr-2 h-5 w-5" />
+                    Scan QR Code
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><QrCode className="h-5 w-5"/> Scan QR Code</DialogTitle>
+                    <DialogDescription>Use your device's camera to scan the pass QR code.</DialogDescription>
+                </DialogHeader>
+                <QrScanner isOpen={isScannerOpen} onScanSuccess={() => setIsScannerOpen(false)} />
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>

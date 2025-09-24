@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -21,7 +22,12 @@ const qrPayloadSchema = z.object({
   exp: z.number(),
 });
 
-export default function QrScanner() {
+interface QrScannerProps {
+  isOpen: boolean;
+  onScanSuccess: () => void;
+}
+
+export default function QrScanner({ isOpen, onScanSuccess }: QrScannerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [passResult, setPassResult] = useState<Pass | "not_found" | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -31,17 +37,36 @@ export default function QrScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
+  const stopScan = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    setIsScanning(false);
+  };
+  
   useEffect(() => {
+    if (isOpen) {
+      startScan();
+    } else {
+      stopScan();
+    }
+
     return () => {
-      // Cleanup: stop video stream when component unmounts
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      stopScan();
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const startScan = async () => {
+    if (isScanning || streamRef.current) return;
+    
     setIsScanning(true);
     setIsLoading(true);
     setPassResult(null);
@@ -51,36 +76,29 @@ export default function QrScanner() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
       setHasCameraPermission(true);
-      requestAnimationFrame(tick);
+      animationFrameRef.current = requestAnimationFrame(tick);
     } catch (error) {
       console.error("Error accessing camera:", error);
       setHasCameraPermission(false);
       toast({
         variant: "destructive",
         title: "Camera Access Denied",
-        description: "Please enable camera permissions in your browser settings to use this feature.",
+        description: "Please enable camera permissions in your browser settings.",
       });
       setIsScanning(false);
     } finally {
       setIsLoading(false);
     }
   };
-
-  const stopScan = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-    setIsScanning(false);
-    setHasCameraPermission(null);
-  };
   
   const tick = () => {
     if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
 
       if (context) {
         canvas.height = video.videoHeight;
@@ -97,13 +115,12 @@ export default function QrScanner() {
         }
       }
     }
-    if(isScanning) {
-        requestAnimationFrame(tick);
-    }
+    animationFrameRef.current = requestAnimationFrame(tick);
   };
   
   const handleQrCode = async (data: string) => {
     stopScan();
+    onScanSuccess(); // Close the scanner dialog
     setIsLoading(true);
     
     try {
@@ -136,21 +153,10 @@ export default function QrScanner() {
 
   return (
     <div className="space-y-6">
-      {!isScanning ? (
-        <div className="flex justify-center">
-            <Button onClick={startScan} disabled={isLoading} size="lg">
-            {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <QrCode className="mr-2 h-4 w-4" />
-            )}
-            QR Code Scanner
-            </Button>
-        </div>
-      ) : (
+      {isScanning && (
         <div className="space-y-4">
             <div className="relative aspect-video overflow-hidden rounded-lg border bg-black">
-                <video ref={videoRef} className="h-full w-full object-cover" autoPlay playsInline muted />
+                <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
                 <canvas ref={canvasRef} className="hidden" />
                  <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-64 h-64 border-4 border-dashed border-primary/80 rounded-lg animate-pulse"></div>
@@ -165,13 +171,10 @@ export default function QrScanner() {
                 </AlertDescription>
                 </Alert>
             )}
-            <Button onClick={stopScan} variant="destructive" className="w-full">
-                Cancel Scan
-            </Button>
         </div>
       )}
 
-      {isLoading && !isScanning && (
+      {(isLoading && !isScanning) && (
         <div className="flex justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
