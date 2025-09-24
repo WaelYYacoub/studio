@@ -24,9 +24,9 @@ const formSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
-  phone: z.string().optional(),
+  phone: z.string().min(1, "Phone number is required."),
   company: z.string().min(2, "Company is required."),
-  companyId: z.string().optional(),
+  companyId: z.string().min(1, "Company ID is required."),
   workLocation: z.string().min(1, "Work location is required."),
 });
 
