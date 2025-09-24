@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, XCircle, Clock, ShieldQuestion } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ShieldQuestion, Share2, Download } from "lucide-react";
 import type { Pass } from "@/types";
 import { format } from "date-fns";
 import QrCodeDisplay from "../ui/qr-code";
 import { Separator } from "../ui/separator";
+import { Button } from "../ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface PassDetailsProps {
   pass: Pass | "not_found";
@@ -12,6 +14,8 @@ interface PassDetailsProps {
 }
 
 export default function PassDetails({ pass, isAdminSearch = false }: PassDetailsProps) {
+  const { toast } = useToast();
+
   if (pass === "not_found") {
     return (
       <Alert variant="destructive">
@@ -23,6 +27,8 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
       </Alert>
     );
   }
+  
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(JSON.stringify(pass.qrPayload))}`;
 
   const isExpired = pass.expiresAt.toDate() < new Date();
   const isAllowed = pass.status === "active" && !isExpired;
@@ -54,6 +60,46 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   }
 
   const statusInfo = getStatusInfo();
+
+   const handleDownload = async () => {
+    try {
+        const response = await fetch(qrUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast({ title: "Success", description: "QR code downloaded." });
+    } catch (error) {
+        console.error("Download failed", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not download QR code." });
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+        title: 'Gate Pass',
+        text: `Gate Pass for ${pass.plateAlpha}-${pass.plateNum}`,
+        url: window.location.href,
+    };
+    if (navigator.share && navigator.canShare(shareData)) {
+        try {
+            await navigator.share(shareData);
+            toast({ title: "Shared", description: "Pass details shared successfully." });
+        } catch (error) {
+            console.error('Share failed', error);
+            toast({ variant: "destructive", title: "Error", description: "Could not share pass." });
+        }
+    } else {
+        toast({ variant: "destructive", title: "Not Supported", description: "Web Share API is not supported in your browser." });
+    }
+  };
+
 
   return (
     <Card className={isAllowed ? "border-green-500" : "border-red-500"}>
@@ -111,9 +157,17 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
         </div>
         <Separator />
          <div className="text-center">
-            <div className="inline-flex flex-col items-center gap-2 border rounded-lg p-4">
+            <div className="inline-flex flex-col items-center gap-2 rounded-lg border p-4">
                 <QrCodeDisplay payload={pass.qrPayload} />
                 <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
+                 <div className="flex items-center gap-2 mt-2">
+                    <Button variant="outline" size="sm" onClick={handleShare}>
+                        <Share2 className="mr-2 h-3 w-3" /> Share
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDownload}>
+                        <Download className="mr-2 h-3 w-3" /> Download
+                    </Button>
+                </div>
             </div>
         </div>
       </CardContent>
