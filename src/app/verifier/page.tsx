@@ -1,4 +1,6 @@
 
+"use client";
+
 import { ShieldCheck, QrCode } from 'lucide-react';
 import ManualSearch from '@/components/verifier/manual-search';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
