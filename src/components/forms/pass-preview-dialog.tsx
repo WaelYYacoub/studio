@@ -51,42 +51,62 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
     }
   };
 
-  const handleDownload = useCallback(() => {
-    if (cardRef.current === null) {
-      return;
-    }
-
-    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff' })
-      .then((dataUrl) => {
-        const link = document.createElement('a');
-        link.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
-        link.href = dataUrl;
-        link.click();
-        toast({ title: "Success", description: "QR code card downloaded." });
-      })
-      .catch((err) => {
-        console.error(err);
-        toast({ variant: "destructive", title: "Error", description: "Could not download QR code card." });
+  const exportCard = useCallback(async (): Promise<string | null> => {
+    if (!cardRef.current) return null;
+    try {
+      return await toPng(cardRef.current, {
+        cacheBust: true,
+        style: {
+          background: "white",
+          fontFamily: "sans-serif",
+        },
+        filter: (node) => {
+          if (node.tagName === "STYLE" || node.tagName === "LINK") {
+            return false;
+          }
+          return true;
+        },
       });
-  }, [cardRef, pass, toast]);
+    } catch (err) {
+      console.error("❌ Failed to export card:", err);
+      toast({ variant: "destructive", title: "Error", description: "Could not export pass card." });
+      return null;
+    }
+  }, [cardRef, toast]);
+
+
+  const handleDownload = useCallback(async () => {
+    const dataUrl = await exportCard();
+    if (!dataUrl) return;
+
+    const link = document.createElement('a');
+    link.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
+    link.href = dataUrl;
+    link.click();
+    toast({ title: "Success", description: "QR code card downloaded." });
+  }, [exportCard, pass]);
 
 
   const handleShare = async () => {
-    const shareData = {
-        title: 'Gate Pass',
-        text: `Gate Pass for ${pass.plateAlpha}-${pass.plateNum}`,
-        url: window.location.href, // Or a specific public URL for the pass if available
-    };
-    if (navigator.share && navigator.canShare(shareData)) {
-        try {
-            await navigator.share(shareData);
-            toast({ title: "Shared", description: "Pass details shared successfully." });
-        } catch (error) {
-            console.error('Share failed', error);
-            toast({ variant: "destructive", title: "Error", description: "Could not share pass." });
-        }
-    } else {
-        toast({ variant: "destructive", title: "Not Supported", description: "Web Share API is not supported in your browser." });
+    const dataUrl = await exportCard();
+    if (!dataUrl) return;
+    
+    try {
+      const blob = await(await fetch(dataUrl)).blob();
+      const file = new File([blob], `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`, { type: blob.type });
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+              title: 'Gate Pass',
+              files: [file],
+          });
+          toast({ title: "Shared", description: "Pass details shared successfully." });
+      } else {
+        toast({ variant: "destructive", title: "Not Supported", description: "Web Share API for files is not supported in your browser." });
+      }
+    } catch (error) {
+        console.error('Share failed', error);
+        toast({ variant: "destructive", title: "Error", description: "Could not share pass." });
     }
   };
 
@@ -131,7 +151,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     )}
 
                     <span className="details-label font-semibold text-muted-foreground">Expires:</span>
-                    <span className="details-value" style={{textTransform: 'none'}}>{format(pass.expiresAt.toDate(), "PPP, p")}</span>
+                    <span className="details-value" style={{textTransform: 'none'}}>{format(new Date(pass.expiresAt as any), "PPP, p")}</span>
                 </div>
 
                 <div ref={cardRef} className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4 bg-white">
