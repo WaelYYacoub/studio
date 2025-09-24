@@ -21,12 +21,14 @@ import { Calendar } from "../ui/calendar";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/data-provider";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const PAGE_SIZE = 10;
 
 export function RecordsTable() {
   const { passes: allPasses, users, loading: dataLoading } = useData();
   const [currentPage, setCurrentPage] = useState(1);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState({
     company: "",
     status: "all",
@@ -63,6 +65,25 @@ export function RecordsTable() {
       setCurrentPage(1);
       setFilters(prev => ({...prev, [key]: value}));
   }
+  
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    const newSelection: Record<string, boolean> = {};
+    if (checked === true) {
+      paginatedPasses.forEach(pass => {
+        newSelection[pass.id] = true;
+      });
+    }
+    setRowSelection(newSelection);
+  };
+
+  const handleRowSelect = (passId: string, checked: boolean | 'indeterminate') => {
+    setRowSelection(prev => ({
+      ...prev,
+      [passId]: checked === true,
+    }));
+  };
+
+  const isAllVisibleSelected = paginatedPasses.length > 0 && paginatedPasses.every(pass => rowSelection[pass.id]);
 
   const getStatusVariant = (status: PassStatus) => {
     switch (status) {
@@ -123,6 +144,13 @@ export function RecordsTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={isAllVisibleSelected}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
               <TableHead>Plate</TableHead>
               <TableHead>Owner / Visitor</TableHead>
               <TableHead>Company</TableHead>
@@ -137,7 +165,7 @@ export function RecordsTable() {
           <TableBody>
             {dataLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                 </TableCell>
               </TableRow>
@@ -145,7 +173,14 @@ export function RecordsTable() {
               paginatedPasses.map((pass) => {
                 const creator = users.find(u => u.uid === pass.createdBy);
                 return (
-                  <TableRow key={pass.id}>
+                  <TableRow key={pass.id} data-state={rowSelection[pass.id] && 'selected'}>
+                    <TableCell>
+                      <Checkbox
+                        checked={rowSelection[pass.id] || false}
+                        onCheckedChange={(checked) => handleRowSelect(pass.id, checked)}
+                        aria-label="Select row"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {pass.plateAlpha}-{pass.plateNum}
                     </TableCell>
@@ -172,7 +207,7 @@ export function RecordsTable() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No passes found.
                 </TableCell>
               </TableRow>
