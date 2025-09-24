@@ -60,16 +60,16 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   return (
     <Card className={isAllowed ? "border-green-500" : "border-red-500"}>
        <CardHeader>
-        <div className="flex items-center gap-3">
-            {isAllowed ? (
-                <Image src="/Opening Gate.gif" alt="Access Granted" width={48} height={48} unoptimized />
-            ) : (
-                <statusInfo.icon className={`h-8 w-8 ${isAllowed ? 'text-green-600' : 'text-red-600'}`} />
-            )}
+        <div className="flex items-center justify-between gap-3">
             <div>
                  <CardTitle className={isAllowed ? 'text-green-700' : 'text-red-700'}>{statusInfo.title}</CardTitle>
                  <CardDescription>{statusInfo.message}</CardDescription>
             </div>
+            {isAllowed ? (
+                <Image src="/Opening Gate.gif" alt="Access Granted" width={64} height={64} unoptimized />
+            ) : (
+                <statusInfo.icon className={`h-12 w-12 ${isAllowed ? 'text-green-600' : 'text-red-600'}`} />
+            )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
