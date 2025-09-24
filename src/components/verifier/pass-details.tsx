@@ -15,11 +15,13 @@ interface PassDetailsProps {
 export default function PassDetails({ pass, isAdminSearch = false }: PassDetailsProps) {
 
   useEffect(() => {
+    if (isAdminSearch) return;
+
     if (pass === "not_found" || (pass !== "not_found" && pass.expiresAt.toDate() < new Date())) {
         const audio = new Audio('/denied.mp3');
         audio.play().catch(error => console.error("Audio play failed:", error));
     }
-  }, [pass]);
+  }, [pass, isAdminSearch]);
 
   if (pass === "not_found") {
     return (
@@ -32,7 +34,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
                         No active pass found for this plate number. Please check the details and try again.
                     </CardDescription>
                 </div>
-                <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
+                {!isAdminSearch && <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />}
             </div>
         </CardHeader>
       </Card>
@@ -43,6 +45,8 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   const isAllowed = pass.status === "active" && !isExpired;
 
   useEffect(() => {
+    if (isAdminSearch) return;
+
     if (isAllowed) {
       const audio = new Audio('/success.mp3');
       audio.play().catch(error => console.error("Audio play failed:", error));
@@ -50,7 +54,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
         const audio = new Audio('/denied.mp3');
         audio.play().catch(error => console.error("Audio play failed:", error));
     }
-  }, [isAllowed]);
+  }, [isAllowed, isAdminSearch]);
   
   if (!isAdminSearch && !isAllowed) {
      return (
@@ -63,7 +67,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
                         This pass is not currently active or has expired.
                     </CardDescription>
                 </div>
-                <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
+                {!isAdminSearch && <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />}
             </div>
         </CardHeader>
       </Card>
@@ -93,9 +97,10 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
                  <CardTitle className={isAllowed ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>{statusInfo.title}</CardTitle>
                  <CardDescription className={isAllowed ? 'text-green-600 dark:text-green-400/80' : 'text-red-600 dark:text-red-400/80'}>{statusInfo.message}</CardDescription>
             </div>
-            {isAllowed ? (
+            {!isAdminSearch && isAllowed && (
                 <Image src="/Opening Gate.gif" alt="Access Granted" width={96} height={96} unoptimized />
-            ) : (
+            )}
+            {!isAdminSearch && !isAllowed && (
                 <Image src="/Closing Gate.gif" alt="Access Denied" width={96} height={96} unoptimized />
             )}
         </div>
