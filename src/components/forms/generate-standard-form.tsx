@@ -38,6 +38,8 @@ const formSchema = z.object({
   expiresAt: z.date({ required_error: "Expiry date is required." }),
 });
 
+const locations = ["SEC 01", "SEC 02", "SEC 03", "SEC 04", "SEC 05", "SEC 06", "SEC 07", "SEC 08", "SEC 09", "SEC 10", "LD 01", "LD 02", "LD 03", "LD 04", "LD 05", "LD 06", "Pump Station"];
+
 export default function GenerateStandardForm() {
   const { user, loading: userLoading } = useAuth();
   const { toast } = useToast();
@@ -173,7 +175,7 @@ export default function GenerateStandardForm() {
               </FormItem>
             )}
           />
-          <FormField
+           <FormField
             control={form.control}
             name="location"
             render={({ field }) => (
@@ -186,9 +188,9 @@ export default function GenerateStandardForm() {
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="Pump Station A">Pump Station A</SelectItem>
-                            <SelectItem value="Refinery">Refinery</SelectItem>
-                            <SelectItem value="HQ">HQ</SelectItem>
+                            {locations.map(loc => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <FormMessage />

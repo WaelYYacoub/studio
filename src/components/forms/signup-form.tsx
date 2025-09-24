@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 const formSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters."),
@@ -26,8 +27,10 @@ const formSchema = z.object({
   phone: z.string().optional(),
   company: z.string().min(2, "Company is required."),
   companyId: z.string().optional(),
-  workLocation: z.string().min(2, "Work location is required."),
+  workLocation: z.string().min(1, "Work location is required."),
 });
+
+const locations = ["SEC 01", "SEC 02", "SEC 03", "SEC 04", "SEC 05", "SEC 06", "SEC 07", "SEC 08", "SEC 09", "SEC 10", "LD 01", "LD 02", "LD 03", "LD 04", "LD 05", "LD 06", "Pump Station"];
 
 export function SignupForm() {
   const { handleSignUp, loading } = useAuth();
@@ -157,9 +160,18 @@ export function SignupForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Work Location</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Pump Station" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                             {locations.map(loc => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                   <FormMessage />
                 </FormItem>
               )}
