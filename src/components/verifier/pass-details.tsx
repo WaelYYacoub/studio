@@ -70,6 +70,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
     try {
       return await toPng(cardRef.current, {
         cacheBust: true,
+        skipFonts: true,
         style: {
           background: "white",
           fontFamily: "sans-serif",

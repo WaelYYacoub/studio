@@ -56,6 +56,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
     try {
       return await toPng(cardRef.current, {
         cacheBust: true,
+        skipFonts: true,
         style: {
           background: "white",
           fontFamily: "sans-serif",
