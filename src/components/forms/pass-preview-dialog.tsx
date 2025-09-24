@@ -103,7 +103,12 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
           });
           toast({ title: "Shared", description: "Pass details shared successfully." });
       } else {
-        toast({ variant: "destructive", title: "Not Supported", description: "Web Share API for files is not supported in your browser." });
+        const win = window.open();
+        if (win) {
+            win.document.write(`<img src="${dataUrl}" alt="Pass QR Code" />`);
+        } else {
+            toast({ variant: "destructive", title: "Not Supported", description: "Web Share API for files is not supported in your browser." });
+        }
       }
     } catch (error) {
         console.error('Share failed', error);
