@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, XCircle, Clock, ShieldQuestion, Share2, Download } from "lucide-react";
@@ -157,10 +159,12 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
         </div>
         <Separator />
          <div className="text-center">
-            <div className="inline-flex flex-col items-center gap-2 rounded-lg border p-4">
-                <QrCodeDisplay payload={pass.qrPayload} />
-                <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
-                 <div className="flex items-center gap-2 mt-2">
+            <div className="inline-flex flex-col items-center gap-4">
+                <div className="inline-flex flex-col items-center gap-2 rounded-lg border p-4">
+                    <QrCodeDisplay payload={pass.qrPayload} />
+                    <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
+                </div>
+                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={handleShare}>
                         <Share2 className="mr-2 h-3 w-3" /> Share
                     </Button>
