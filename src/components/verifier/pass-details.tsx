@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,15 +14,36 @@ interface PassDetailsProps {
 }
 
 export default function PassDetails({ pass, isAdminSearch = false }: PassDetailsProps) {
+  const isPassObject = pass !== "not_found";
+  const isExpired = isPassObject && pass.expiresAt.toDate() < new Date();
+  const isAllowed = isPassObject && pass.status === "active" && !isExpired;
 
   useEffect(() => {
     if (isAdminSearch) return;
 
-    if (pass === "not_found" || (pass !== "not_found" && pass.expiresAt.toDate() < new Date())) {
-        const audio = new Audio('/denied.mp3');
-        audio.play().catch(error => console.error("Audio play failed:", error));
+    let audio: HTMLAudioElement | null = null;
+    if (isAllowed) {
+      audio = new Audio('/success.mp3');
+    } else {
+      audio = new Audio('/denied.mp3');
     }
-  }, [pass, isAdminSearch]);
+    
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        // Autoplay was prevented.
+        console.error("Audio play failed:", error);
+      });
+    }
+
+    return () => {
+      // Cleanup: stop the audio if the component unmounts.
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, [isAllowed, isAdminSearch]);
 
   if (pass === "not_found") {
     return (
@@ -40,21 +62,6 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
       </Card>
     );
   }
-  
-  const isExpired = pass.expiresAt.toDate() < new Date();
-  const isAllowed = pass.status === "active" && !isExpired;
-
-  useEffect(() => {
-    if (isAdminSearch) return;
-
-    if (isAllowed) {
-      const audio = new Audio('/success.mp3');
-      audio.play().catch(error => console.error("Audio play failed:", error));
-    } else {
-        const audio = new Audio('/denied.mp3');
-        audio.play().catch(error => console.error("Audio play failed:", error));
-    }
-  }, [isAllowed, isAdminSearch]);
   
   if (!isAdminSearch && !isAllowed) {
      return (
