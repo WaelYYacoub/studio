@@ -86,7 +86,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
 
                 <div className="qr-code mt-6 text-center">
                     <QrCodeDisplay payload={pass.qrPayload} />
-                    <p className="text-xs text-muted-foreground mt-2">ID: {pass.id}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
             </div>
         </div>

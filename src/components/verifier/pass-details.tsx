@@ -112,7 +112,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
         <Separator />
          <div className="flex flex-col items-center gap-2">
             <QrCodeDisplay payload={pass.qrPayload} />
-            <p className="text-xs text-muted-foreground">ID: {pass.id}</p>
+            <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
         </div>
       </CardContent>
     </Card>
