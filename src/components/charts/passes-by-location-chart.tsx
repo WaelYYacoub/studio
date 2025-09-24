@@ -5,28 +5,16 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { collection, getDocs, query } from "firebase/firestore";
-import { db, passConverter } from "@/lib/firestore";
-import { useEffect, useMemo, useState } from "react";
-import type { Pass } from "@/types";
+import { useMemo } from "react";
 import { CardDescription } from "../ui/card";
+import { useData } from "@/context/data-provider";
 
 export function PassesByLocationChart() {
-  const [data, setData] = useState<Pass[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const q = query(collection(db, "passes")).withConverter(passConverter);
-      const snapshot = await getDocs(q);
-      const passes = snapshot.docs.map((doc) => doc.data());
-      setData(passes);
-    };
-    fetchData();
-  }, []);
+  const { passes, loading } = useData();
 
   const chartData = useMemo(() => {
-    if (!data.length) return [];
-    const counts = data.reduce((acc, pass) => {
+    if (!passes.length) return [];
+    const counts = passes.reduce((acc, pass) => {
       acc[pass.location] = (acc[pass.location] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -34,9 +22,9 @@ export function PassesByLocationChart() {
     return Object.entries(counts)
       .map(([location, count]) => ({ name: location, count }))
       .sort((a, b) => b.count - a.count);
-  }, [data]);
+  }, [passes]);
 
-  if (!data.length) {
+  if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
   

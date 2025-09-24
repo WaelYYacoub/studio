@@ -5,33 +5,13 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db, passConverter } from "@/lib/firestore";
-import { useEffect, useMemo, useState } from "react";
-import type { Pass } from "@/types";
-import { format, startOfYear, endOfYear, getMonth } from "date-fns";
+import { useMemo } from "react";
+import { format, getMonth, isThisYear } from "date-fns";
 import { CardDescription } from "../ui/card";
+import { useData } from "@/context/data-provider";
 
 export function PassesByMonthChart() {
-  const [data, setData] = useState<Pass[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const currentYearStart = startOfYear(new Date());
-      const currentYearEnd = endOfYear(new Date());
-
-      const q = query(
-        collection(db, "passes"),
-        where("createdAt", ">=", currentYearStart),
-        where("createdAt", "<=", currentYearEnd)
-      ).withConverter(passConverter);
-
-      const snapshot = await getDocs(q);
-      const passes = snapshot.docs.map((doc) => doc.data());
-      setData(passes);
-    };
-    fetchData();
-  }, []);
+  const { passes, loading } = useData();
 
   const chartData = useMemo(() => {
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
@@ -40,19 +20,22 @@ export function PassesByMonthChart() {
       expired: 0,
     }));
 
-    data.forEach((pass) => {
-      const monthIndex = getMonth(pass.createdAt.toDate());
-      if (pass.status === "active") {
-        monthlyData[monthIndex].active += 1;
-      } else if (pass.status === "expired" || pass.status === "revoked") {
-        monthlyData[monthIndex].expired += 1;
+    passes.forEach((pass) => {
+      const createdAtDate = pass.createdAt.toDate();
+      if (isThisYear(createdAtDate)) {
+        const monthIndex = getMonth(createdAtDate);
+        if (pass.status === "active") {
+          monthlyData[monthIndex].active += 1;
+        } else if (pass.status === "expired" || pass.status === "revoked") {
+          monthlyData[monthIndex].expired += 1;
+        }
       }
     });
 
     return monthlyData;
-  }, [data]);
+  }, [passes]);
   
-  if (!data.length) {
+  if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
 

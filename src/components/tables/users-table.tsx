@@ -1,8 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
-import { db, userConverter } from "@/lib/firestore";
 import type { AppUser, Role } from "@/types";
 import {
   Table,
@@ -16,24 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { UsersTableActions } from "./users-table-actions";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { useData } from "@/context/data-provider";
 
 export function UsersTable() {
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { users, loading } = useData();
   const { user: currentUser } = useAuth();
-
-  useEffect(() => {
-    const q = query(collection(db, "users"), orderBy("createdAt", "desc")).withConverter(userConverter);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const usersData = snapshot.docs
-        .map((doc) => doc.data())
-        .filter(user => user.role !== 'owner'); // Exclude owner from list
-      setUsers(usersData);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const getRoleVariant = (role: Role) => {
     switch (role) {
@@ -51,6 +35,8 @@ export function UsersTable() {
     }
   };
 
+  const displayUsers = users.filter(user => user.role !== 'owner');
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -66,14 +52,14 @@ export function UsersTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading ? (
+          {loading ? (
             <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                 </TableCell>
             </TableRow>
-          ) : users.length > 0 ? (
-            users.map((user) => (
+          ) : displayUsers.length > 0 ? (
+            displayUsers.map((user) => (
               <TableRow key={user.uid}>
                 <TableCell className="font-medium">{user.fullName}</TableCell>
                 <TableCell>{user.email}</TableCell>

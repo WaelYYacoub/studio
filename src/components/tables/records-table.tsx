@@ -1,19 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  startAfter,
-  getDocs,
-  where,
-  Query,
-  DocumentData,
-  QueryConstraint,
-} from "firebase/firestore";
-import { db, passConverter } from "@/lib/firestore";
 import type { Pass, PassStatus } from "@/types";
 import {
   Table,
@@ -33,16 +20,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useData } from "@/context/data-provider";
 
 const PAGE_SIZE = 10;
 
 export function RecordsTable() {
-  const [passes, setPasses] = useState<Pass[]>([]);
-  const [lastVisible, setLastVisible] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-
+  const { passes: allPasses, loading: dataLoading } = useData();
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     company: "",
     status: "all",
@@ -50,70 +34,33 @@ export function RecordsTable() {
     expiresAt: undefined as Date | undefined,
   });
 
-  const fetchPasses = async (loadMore = false) => {
-    if (loadMore) {
-      setIsFetchingMore(true);
-    } else {
-      setIsLoading(true);
-    }
-
-    try {
-      const passesCollection = collection(db, "passes").withConverter(passConverter);
+  const filteredPasses = useMemo(() => {
+    return allPasses.filter(pass => {
+      if (filters.status !== 'all' && pass.status !== filters.status) return false;
       
-      const constraints: QueryConstraint[] = [orderBy("createdAt", "desc")];
-
-      if (filters.status !== 'all') {
-        constraints.push(where("status", "==", filters.status));
-      }
-      if (filters.company) {
-        // This query requires a composite index on (ownerCompany, createdAt) and (createdByCompany, createdAt)
-        // Firestore may not support 'OR' queries well. This is a simplification.
-        // A better approach would be two separate queries or denormalizing company data.
-         constraints.push(where("ownerCompany", "==", filters.company)); 
-      }
-       if (filters.createdAt) {
-        constraints.push(where("createdAt", ">=", filters.createdAt));
-      }
-       if (filters.expiresAt) {
-        constraints.push(where("expiresAt", "<=", filters.expiresAt));
-      }
-
-      if (loadMore && lastVisible) {
-        constraints.push(startAfter(lastVisible));
-      }
-
-      constraints.push(limit(PAGE_SIZE));
-
-      const q = query(passesCollection, ...constraints);
+      const companyMatch = pass.type === 'standard' ? pass.ownerCompany : pass.createdByCompany;
+      if (filters.company && !companyMatch?.toLowerCase().includes(filters.company.toLowerCase())) return false;
       
-      const documentSnapshots = await getDocs(q);
+      if (filters.createdAt && pass.createdAt.toDate() < filters.createdAt) return false;
+      if (filters.expiresAt && pass.expiresAt.toDate() > filters.expiresAt) return false;
 
-      const newPasses = documentSnapshots.docs.map(doc => doc.data());
-      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      return true;
+    })
+  }, [allPasses, filters]);
 
-      setLastVisible(lastDoc);
-      setHasMore(newPasses.length === PAGE_SIZE);
-      
-      if(loadMore) {
-          setPasses(prev => [...prev, ...newPasses]);
-      } else {
-          setPasses(newPasses);
-      }
+  const paginatedPasses = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredPasses.slice(start, end);
+  }, [filteredPasses, currentPage]);
+  
+  const hasMore = useMemo(() => {
+    return currentPage * PAGE_SIZE < filteredPasses.length;
+  }, [currentPage, filteredPasses]);
 
-    } catch (error) {
-      console.error("Error fetching passes: ", error);
-    } finally {
-      setIsLoading(false);
-      setIsFetchingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPasses();
-  }, [filters]);
 
   const handleFilterChange = (key: keyof typeof filters, value: any) => {
-      setLastVisible(null);
+      setCurrentPage(1);
       setFilters(prev => ({...prev, [key]: value}));
   }
 
@@ -188,14 +135,14 @@ export function RecordsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {dataLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                 </TableCell>
               </TableRow>
-            ) : passes.length > 0 ? (
-              passes.map((pass) => (
+            ) : paginatedPasses.length > 0 ? (
+              paginatedPasses.map((pass) => (
                 <TableRow key={pass.id}>
                   <TableCell className="font-medium">
                     {pass.plateAlpha}-{pass.plateNum}
@@ -232,10 +179,8 @@ export function RecordsTable() {
       </div>
       {hasMore && (
         <div className="text-center">
-          <Button onClick={() => fetchPasses(true)} disabled={isFetchingMore}>
-            {isFetchingMore ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Loading...</>
-            ) : "Load More"}
+          <Button onClick={() => setCurrentPage(p => p + 1)} >
+            Load More
           </Button>
         </div>
       )}
