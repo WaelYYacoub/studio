@@ -28,7 +28,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
 
     if (printWindow && printContent) {
         printWindow.document.write(`<html><head><title>Print Pass</title>`);
-        printWindow.document.write('<style>body { font-family: sans-serif; } .print-card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; max-width: 400px; margin: 20px auto; } h2 { text-align: center; } .details { display: grid; grid-template-columns: 100px 1fr; gap: 8px; } .qr-code-container { border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-top: 16px; text-align: center; } img { max-width: 150px; margin: auto; }</style>');
+        printWindow.document.write('<style>body { font-family: sans-serif; } .print-card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; max-width: 400px; margin: 20px auto; text-align: center; } h2 { text-align: center; } .details { display: grid; grid-template-columns: 100px 1fr; gap: 8px; text-align: left; } .qr-code-container { border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-top: 16px; display: inline-flex; flex-direction: column; align-items: center; gap: 8px; } img { max-width: 150px; margin: auto; }</style>');
         printWindow.document.write('</head><body>');
         printWindow.document.write(printContent.innerHTML);
         printWindow.document.write('</body></html>');
@@ -50,12 +50,12 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
           </DialogDescription>
         </DialogHeader>
 
-        <div id="print-area" className="py-4 space-y-4">
-             <div className="print-card">
+        <div id="print-area" className="py-4">
+             <div className="print-card text-center">
                  <h2 className="text-2xl font-bold font-headline text-center mb-4">
                     {pass.plateAlpha} {pass.plateNum}
                 </h2>
-                <div className="details grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 text-sm">
+                <div className="details grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 text-sm text-left">
                     <span className="font-semibold text-muted-foreground">Status:</span>
                     <span className="font-bold text-green-600 capitalize">{pass.status}</span>
 
@@ -81,12 +81,12 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     )}
 
                     <span className="font-semibold text-muted-foreground">Expires:</span>
-                    <span>{format(pass.expiresAt, "PPP, p")}</span>
+                    <span>{format(pass.expiresAt.toDate(), "PPP, p")}</span>
                 </div>
 
-                <div className="qr-code-container mt-6 text-center border rounded-lg p-4">
+                <div className="qr-code-container mt-6 inline-flex flex-col items-center gap-2 border rounded-lg p-4">
                     <QrCodeDisplay payload={pass.qrPayload} />
-                    <p className="text-xs text-muted-foreground mt-2">{pass.plateAlpha}-{pass.plateNum}</p>
+                    <p className="text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
             </div>
         </div>
