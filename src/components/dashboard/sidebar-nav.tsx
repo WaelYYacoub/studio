@@ -28,7 +28,7 @@ const navItems = [
   { href: "/admin/dashboard/statistics", label: "Pass Statistics", icon: BarChart2 },
   {
     href: "/admin/dashboard/users",
-    label: "Users",
+    label: "Manage Users",
     icon: Users,
     roles: ["admin", "owner"],
   },
