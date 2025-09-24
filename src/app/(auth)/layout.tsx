@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
          <div className="mt-6 text-center">
           <Link href="/verifier" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
             <ShieldAlert className="h-5 w-5" />
-            <span>Public Pass Verifier</span>
+            <span>Pass Verifier</span>
           </Link>
         </div>
       </div>

@@ -56,7 +56,7 @@ export default function SidebarNav() {
             className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted`}
           >
             <ShieldAlert className="h-4 w-4" />
-            <span>Public Verifier</span>
+            <span>Pass Verifier</span>
           </button>
         </Link>
 
