@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection, query, where } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection, query, where, limit } from "firebase/firestore";
 import { auth, db, userConverter } from "@/lib/firestore";
 import type { AppUser, Role } from "@/types";
 
@@ -61,20 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { email, password, fullName, phone, company, companyId, workLocation } = data;
       
-      const existingUserQuery = query(collection(db, "users"), where("email", "==", email), limit(1));
-      const existingUserSnapshot = await getDocs(existingUserQuery);
-      if (!existingUserSnapshot.empty) {
-        return "An account with this email already exists in Firestore. Please use the reset script or a different email.";
-      }
-
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      const usersQuery = query(collection(db, 'users'));
-      const usersSnapshot = await getDocs(usersQuery);
-      const isFirstUser = usersSnapshot.empty;
-
-      const newUserRole = isFirstUser ? 'owner' : 'pending';
+      const metaRef = doc(db, "app", "config");
+      const metaSnap = await getDoc(metaRef);
+      const isOwner = !metaSnap.exists() || metaSnap.data().ownerSet !== true;
+      const newUserRole = isOwner ? 'owner' : 'pending';
 
       const userProfile: Omit<AppUser, 'uid'> = {
         email,
@@ -91,6 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await setDoc(doc(db, "users", uid), userProfile);
       
+      if (isOwner) {
+        await setDoc(metaRef, { ownerSet: true }, { merge: true });
+      }
+      
       if (newUserRole === 'pending') {
           await signOut(auth);
           router.push("/login?pending=1");
@@ -102,6 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     } catch (error: any) {
       console.error("Signup error:", error);
+      if (error.code === 'auth/email-already-in-use') {
+        return 'An account with this email already exists. Please try logging in or use the reset script if this is a development environment.';
+      }
       return error.message || "An unknown error occurred.";
     } finally {
       setLoading(false);
