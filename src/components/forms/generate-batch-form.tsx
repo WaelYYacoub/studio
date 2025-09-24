@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { UploadCloud, FileText, CheckCircle, XCircle, Download, FileUp, Loader2 } from 'lucide-react';
+import { UploadCloud, FileText, Download, FileUp, Loader2 } from 'lucide-react';
 
 export default function GenerateBatchForm() {
   const [file, setFile] = useState<File | null>(null);
@@ -29,8 +29,8 @@ export default function GenerateBatchForm() {
   
   const handleDownloadSample = () => {
     // In a real app, you would provide a static file or generate one.
-    const sampleHeader = "plateAlpha,plateNum,ownerName,expiresAt,serial,ownerCompany,location\n";
-    const sampleRow = "ABC,1234,John Doe,2025-12-31,SN-12345,Acme Inc.,SEC 01\n";
+    const sampleHeader = "plateAlpha,plateNum,ownerName,serial,ownerCompany,location,expiresAt\n";
+    const sampleRow = "ABC,1234,John Doe,SN-12345,Acme Inc.,SEC 01,2025-12-31\n";
     const blob = new Blob([sampleHeader, sampleRow], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -77,7 +77,7 @@ export default function GenerateBatchForm() {
             <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold text-foreground">Upload Batch File</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-                Your .xlsx file must contain: `plateAlpha`, `plateNum`, `ownerName`, `expiresAt` (YYYY-MM-DD), `serial`, `ownerCompany`, `location`.
+                Your .xlsx file must contain: `plateAlpha`, `plateNum`, `ownerName`, `serial`, `ownerCompany`, `location`, and `expiresAt` (YYYY-MM-DD).
             </p>
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
                  <Button type="button" variant="destructive" onClick={handleDownloadSample}>
