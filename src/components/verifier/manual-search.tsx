@@ -10,7 +10,7 @@ import type { Pass } from "@/types";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, RotateCcw } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import PassDetails from "./pass-details";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -107,8 +107,8 @@ export default function ManualSearch({ isAdminSearch = false }: ManualSearchProp
               )}
               Search
             </Button>
-            <Button type="button" variant="outline" onClick={handleReset} className="px-4">
-                <RotateCcw className="h-4 w-4" />
+            <Button type="button" variant="outline" onClick={handleReset} className="flex-1">
+                Reset
             </Button>
           </div>
         </form>
