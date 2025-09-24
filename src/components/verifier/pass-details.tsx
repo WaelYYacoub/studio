@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, Clock, ShieldQuestion } from "lucide-react";
 import type { Pass } from "@/types";
 import { format } from "date-fns";
 import Image from "next/image";
+import { useEffect } from "react";
 
 interface PassDetailsProps {
   pass: Pass | "not_found";
@@ -33,6 +34,13 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   
   const isExpired = pass.expiresAt.toDate() < new Date();
   const isAllowed = pass.status === "active" && !isExpired;
+
+  useEffect(() => {
+    if (isAllowed) {
+      const audio = new Audio('/success.mp3');
+      audio.play().catch(error => console.error("Audio play failed:", error));
+    }
+  }, [isAllowed]);
   
   if (!isAdminSearch && !isAllowed) {
      return (
