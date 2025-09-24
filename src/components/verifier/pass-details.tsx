@@ -3,6 +3,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, XCircle, Clock, ShieldQuestion } from "lucide-react";
 import type { Pass } from "@/types";
 import { format } from "date-fns";
+import QrCodeDisplay from "../ui/qr-code";
+import { Separator } from "../ui/separator";
 
 interface PassDetailsProps {
   pass: Pass | "not_found";
@@ -64,7 +66,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
             </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <div className="space-y-2 text-sm">
             <div className="flex justify-between">
                 <span className="font-semibold text-muted-foreground">Plate:</span>
@@ -106,6 +108,11 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
                 <span className="font-semibold text-muted-foreground">Expires At:</span>
                 <span>{format(pass.expiresAt.toDate(), "PPP p")}</span>
             </div>
+        </div>
+        <Separator />
+         <div className="flex flex-col items-center gap-2">
+            <QrCodeDisplay payload={pass.qrPayload} />
+            <p className="text-xs text-muted-foreground">ID: {pass.id}</p>
         </div>
       </CardContent>
     </Card>
