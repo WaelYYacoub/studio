@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import PassDetails from "./pass-details";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const formSchema = z.object({
   plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
@@ -24,7 +25,7 @@ interface ManualSearchProps {
 
 export default function ManualSearch({ isAdminSearch = false }: ManualSearchProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [passResult, setPassResult] = useState<Pass | null | "not_found">(null);
+  const [passResult, setPassResult] = useState<Pass | "not_found" | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -109,7 +110,17 @@ export default function ManualSearch({ isAdminSearch = false }: ManualSearchProp
           </div>
       )}
 
-      {passResult && <PassDetails pass={passResult} isAdminSearch={isAdminSearch} />}
+      <Dialog open={!!passResult} onOpenChange={(open) => !open && setPassResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verification Result</DialogTitle>
+            <DialogDescription>
+              The access status for the scanned pass is shown below.
+            </DialogDescription>
+          </DialogHeader>
+          {passResult && <PassDetails pass={passResult} isAdminSearch={isAdminSearch} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

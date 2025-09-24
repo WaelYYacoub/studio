@@ -9,6 +9,8 @@ import { QrCode, Loader2 } from "lucide-react";
 import PassDetails from "./pass-details";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 
 const qrPayloadSchema = z.object({
   v: z.number(),
@@ -89,7 +91,17 @@ export default function QrScanner() {
         </div>
       )}
 
-      {passResult && <PassDetails pass={passResult} />}
+      <Dialog open={!!passResult} onOpenChange={(open) => !open && setPassResult(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Verification Result</DialogTitle>
+                <DialogDescription>
+                The access status for the scanned pass is shown below.
+                </DialogDescription>
+            </DialogHeader>
+            {passResult && <PassDetails pass={passResult} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
