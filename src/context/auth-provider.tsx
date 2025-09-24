@@ -36,16 +36,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          setUser(userData);
-          setRole(userData.role);
-          if (userData.role !== 'pending' && userData.role !== 'rejected') {
+          
+          if (userData.role === 'pending' || userData.role === 'rejected') {
+             await signOut(auth);
+             setUser(null);
+             setRole(null);
+             router.replace("/login?pending=1");
+          } else {
+            setUser(userData);
+            setRole(userData.role);
             const currentPath = window.location.pathname;
             if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/') {
                 router.replace("/admin/dashboard");
             }
-          } else {
-             router.replace("/login?pending=1");
           }
+        } else {
+            // No user profile found, sign them out.
+            await signOut(auth);
+            setUser(null);
+            setRole(null);
         }
       } else {
         setUser(null);
@@ -110,39 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignIn = async (email: string, pass: string) => {
-    setLoading(true);
     try {
-      // 1. Sign in with Firebase Auth
-      const cred = await signInWithEmailAndPassword(auth, email, pass);
-      const uid = cred.user.uid;
-
-      // 2. Fetch Firestore profile
-      const userRef = doc(db, "users", uid).withConverter(userConverter);
-      const snap = await getDoc(userRef);
-
-      if (!snap.exists()) {
-        await signOut(auth);
-        throw new Error("No profile found. Contact administrator.");
-      }
-
-      const profile = snap.data();
-
-      // 3. Role check
-      if (profile.role === "pending") {
-        await signOut(auth);
-        router.push("/login?pending=1");
-        return "Your account is awaiting approval.";
-      }
-
-      if (profile.role === "rejected") {
-        await signOut(auth);
-        throw new Error("Your account has been rejected.");
-      }
-
+      await signInWithEmailAndPassword(auth, email, pass);
       return null;
     } catch (error: any) {
       console.error("Signin error:", error);
-      setLoading(false);
       return error.message || "An unknown error occurred.";
     } 
   };

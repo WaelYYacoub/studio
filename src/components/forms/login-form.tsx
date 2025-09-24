@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address."),
@@ -25,8 +26,9 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
-  const { handleSignIn, loading } = useAuth();
+  const { handleSignIn } = useAuth();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,6 +39,7 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
     const error = await handleSignIn(values.email, values.password);
     if (error) {
       toast({
@@ -44,6 +47,7 @@ export function LoginForm() {
         title: "Login Failed",
         description: error,
       });
+      setLoading(false);
     }
   }
 
