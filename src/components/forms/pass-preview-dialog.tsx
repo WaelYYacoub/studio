@@ -56,7 +56,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
       return;
     }
 
-    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff', style: { borderRadius: '0', boxShadow: 'none' } })
+    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff' })
       .then((dataUrl) => {
         const link = document.createElement('a');
         link.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
@@ -131,7 +131,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     )}
 
                     <span className="details-label font-semibold text-muted-foreground">Expires:</span>
-                    <span className="details-value" style={{textTransform: 'none'}}>{format(pass.expiresAt, "PPP, p")}</span>
+                    <span className="details-value" style={{textTransform: 'none'}}>{format(pass.expiresAt.toDate(), "PPP, p")}</span>
                 </div>
 
                 <div ref={cardRef} className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4 bg-white">

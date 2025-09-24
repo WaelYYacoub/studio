@@ -70,7 +70,7 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
       return;
     }
 
-    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff', style: { borderRadius: '0', boxShadow: 'none' } })
+    toPng(cardRef.current, { cacheBust: true, backgroundColor: '#ffffff' })
       .then((dataUrl) => {
         const link = document.createElement('a');
         link.download = `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`;
