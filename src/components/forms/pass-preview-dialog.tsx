@@ -115,6 +115,13 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
         toast({ variant: "destructive", title: "Error", description: "Could not share pass." });
     }
   };
+  
+  const getPassDate = (date: any): Date => {
+    if (date.toDate) { // It's a Firestore Timestamp
+      return date.toDate();
+    }
+    return new Date(date); // It's likely already a Date or a string
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -157,7 +164,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     )}
 
                     <span className="details-label font-semibold text-muted-foreground">Expires:</span>
-                    <span className="details-value" style={{textTransform: 'none'}}>{format(new Date(pass.expiresAt as any), "PPP, p")}</span>
+                    <span className="details-value" style={{textTransform: 'none'}}>{format(getPassDate(pass.expiresAt), "PPP, p")}</span>
                 </div>
 
                 <div ref={cardRef} className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4 bg-white">
