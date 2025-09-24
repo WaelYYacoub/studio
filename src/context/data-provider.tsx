@@ -6,8 +6,9 @@ import {
   useEffect,
   type ReactNode,
   useContext,
+  useCallback,
 } from "react";
-import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, getDocs, orderBy } from "firebase/firestore";
 import { db, passConverter, userConverter } from "@/lib/firestore";
 import type { AppUser, Pass } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,48 +28,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = () => {
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+
     setLoading(true);
-
-    const passesQuery = query(collection(db, "passes"), orderBy("createdAt", "desc")).withConverter(passConverter);
-    const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc")).withConverter(userConverter);
-
-    const passesUnsubscribe = onSnapshot(passesQuery, (snapshot) => {
-      const passesData = snapshot.docs.map(doc => doc.data());
+    try {
+      const passesQuery = query(collection(db, "passes"), orderBy("createdAt", "desc")).withConverter(passConverter);
+      const passesSnapshot = await getDocs(passesQuery);
+      const passesData = passesSnapshot.docs.map(doc => doc.data());
       setPasses(passesData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching passes:", error);
-      setLoading(false);
-    });
 
-    const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-      const usersData = snapshot.docs.map(doc => doc.data());
+      const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc")).withConverter(userConverter);
+      const usersSnapshot = await getDocs(usersQuery);
+      const usersData = usersSnapshot.docs.map(doc => doc.data());
       setUsers(usersData);
-    }, (error) => {
-      console.error("Error fetching users:", error);
-    });
 
-    return () => {
-      passesUnsubscribe();
-      usersUnsubscribe();
-    };
-  };
-
-  useEffect(() => {
-    if (user) { // Only fetch data if user is logged in
-      const unsubscribe = fetchData();
-      return unsubscribe;
-    } else {
-      setPasses([]);
-      setUsers([]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
       setLoading(false);
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    } else {
+      // Clear data on logout
+      setPasses([]);
+      setUsers([]);
+      setLoading(false);
+    }
+  }, [user, fetchData]);
+
   const refreshData = () => {
-      // This function can be called to manually re-trigger fetches if needed,
-      // but onSnapshot should handle most updates automatically.
+    fetchData();
   };
 
   const value = { passes, users, loading, refreshData };
