@@ -1,4 +1,3 @@
-
 "use client";
 
 import { ShieldCheck, QrCode } from 'lucide-react';
@@ -12,7 +11,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useState } from 'react';

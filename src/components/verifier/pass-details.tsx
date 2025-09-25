@@ -22,28 +22,23 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
     if (isAdminSearch) return;
 
     let audio: HTMLAudioElement | null = null;
-    if (isAllowed) {
-      audio = new Audio('/success.mp3');
-    } else {
-      audio = new Audio('/denied.mp3');
+    if (isPassObject) {
+      audio = new Audio(isAllowed ? '/success.mp3' : '/denied.mp3');
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Audio play failed:", error);
+        });
+      }
     }
-    
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(error => {
-        // Autoplay was prevented.
-        console.error("Audio play failed:", error);
-      });
-    }
-
+  
     return () => {
-      // Cleanup: stop the audio if the component unmounts.
       if (audio) {
         audio.pause();
         audio.currentTime = 0;
       }
     };
-  }, [isAllowed, isAdminSearch]);
+  }, [pass, isAllowed, isAdminSearch, isPassObject]);
 
   if (pass === "not_found") {
     return (
