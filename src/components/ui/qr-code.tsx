@@ -1,9 +1,10 @@
 "use client";
+
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
 
 interface QrCodeDisplayProps {
-  payload: object;
+  payload: any;
   size?: number;
 }
 
@@ -19,7 +20,6 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
         if (!payload || Object.keys(payload).length === 0) {
           console.error("QR payload is empty or undefined:", payload);
           
-          // Display error message on canvas
           const ctx = canvasRef.current.getContext('2d');
           if (ctx) {
             ctx.fillStyle = '#f0f0f0';
@@ -33,15 +33,13 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
           return;
         }
 
-        // Convert payload to JSON string
         const qrData = JSON.stringify(payload);
         console.log("Generating QR with data:", qrData);
-        console.log("Payload keys:", Object.keys(payload));
 
-        // Generate QR code directly on canvas
+        // Generate QR code with larger margin for cleaner look
         await QRCode.toCanvas(canvasRef.current, qrData, {
           width: size,
-          margin: 1,
+          margin: 2, // Increased margin for cleaner appearance
           errorCorrectionLevel: 'M',
           color: {
             dark: "#000000",
@@ -53,7 +51,6 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
       } catch (err) {
         console.error("Error generating QR code:", err);
         
-        // Display error on canvas
         const ctx = canvasRef.current?.getContext('2d');
         if (ctx && canvasRef.current) {
           ctx.fillStyle = '#ffe0e0';
@@ -69,5 +66,24 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
     generateQR();
   }, [payload, size]);
 
-  return <canvas ref={canvasRef} width={size} height={size} className="mx-auto rounded-lg" />;
+  // Extract plate number from payload
+  const plateNumber = payload?.pa && payload?.pn 
+    ? `${payload.pa.toUpperCase()}-${payload.pn}` 
+    : null;
+
+  return (
+    <div className="inline-flex flex-col items-center gap-3 p-4 bg-white border-2 border-gray-200 rounded-lg shadow-sm">
+      <canvas 
+        ref={canvasRef} 
+        width={size} 
+        height={size} 
+        className="rounded-md"
+      />
+      {plateNumber && (
+        <div className="text-center font-mono font-bold text-lg tracking-wider text-gray-800">
+          {plateNumber}
+        </div>
+      )}
+    </div>
+  );
 }
