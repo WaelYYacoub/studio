@@ -18,27 +18,39 @@ export default function PassDetails({ pass, isAdminSearch = false }: PassDetails
   const isExpired = isPassObject && pass.expiresAt.toDate() < new Date();
   const isAllowed = isPassObject && pass.status === "active" && !isExpired;
 
-  useEffect(() => {
-    if (isAdminSearch) return;
+useEffect(() => {
+  if (isAdminSearch) return;
 
-    let audio: HTMLAudioElement | null = null;
-    if (isPassObject) {
-      audio = new Audio(isAllowed ? '/success.mp3' : '/denied.mp3');
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error("Audio play failed:", error);
+  let audio: HTMLAudioElement | null = null;
+  let isCleaningUp = false;
+
+  if (isPassObject) {
+    audio = new Audio(isAllowed ? '/success.mp3' : '/denied.mp3');
+    
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          // Audio started playing successfully
+        })
+        .catch(error => {
+          // Silently handle autoplay restrictions
+          if (error.name !== 'AbortError') {
+            console.log("Audio playback blocked by browser");
+          }
         });
-      }
     }
-  
-    return () => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    };
-  }, [pass, isAllowed, isAdminSearch, isPassObject]);
+  }
+
+  return () => {
+    isCleaningUp = true;
+    if (audio) {
+      audio.pause();
+      audio.src = ''; // Release resources
+      audio = null;
+    }
+  };
+}, [pass, isAllowed, isAdminSearch, isPassObject]);
 
   if (pass === "not_found") {
     return (
