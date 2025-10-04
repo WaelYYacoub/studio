@@ -1,45 +1,78 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import QRCode from "qrcode";
+import { useEffect, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 
-interface QrCodeDisplayProps {
-  payload: object;
-  size?: number;
+interface QrScannerProps {
+  onScanSuccess: (decodedText: string) => void;
+  onScanError?: (error: string) => void;
 }
 
-export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export default function QrScanner({ onScanSuccess, onScanError }: QrScannerProps) {
+  const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const qrCodeRegionId = "qr-reader";
 
   useEffect(() => {
-    const generateQR = async () => {
-      if (!canvasRef.current) return;
-      
+    const startScanner = async () => {
       try {
-        // Convert payload to JSON string (NO URL encoding)
-        const qrData = JSON.stringify(payload);
-        
-        console.log("Generating QR with data:", qrData);
-        
-        // Generate QR code directly on canvas
-        await QRCode.toCanvas(canvasRef.current, qrData, {
-          width: size,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-          color: {
-            dark: "#000000",
-            light: "#FFFFFF",
+        setIsScanning(true);
+        setError(null);
+
+        // Initialize scanner
+        scannerRef.current = new Html5Qrcode(qrCodeRegionId);
+
+        // Start scanning
+        await scannerRef.current.start(
+          { facingMode: "environment" }, // Use back camera
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
           },
-        });
-        
-        console.log("✓ QR code generated successfully");
-      } catch (err) {
-        console.error("Error generating QR code:", err);
+          (decodedText) => {
+            console.log("QR Code scanned:", decodedText);
+            onScanSuccess(decodedText);
+          },
+          (errorMessage) => {
+            // Ignore continuous scan errors
+          }
+        );
+      } catch (err: any) {
+        const errorMsg = err?.message || "Failed to access camera";
+        console.error("Scanner error:", errorMsg);
+        setError(errorMsg);
+        if (onScanError) onScanError(errorMsg);
       }
     };
 
-    generateQR();
-  }, [payload, size]);
+    startScanner();
 
-  return <canvas ref={canvasRef} className="mx-auto rounded-lg" />;
+    // Cleanup on unmount
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+      }
+    };
+  }, [onScanSuccess, onScanError]);
+
+  return (
+    <div className="space-y-4">
+      <div id={qrCodeRegionId} className="w-full" />
+      
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+          <p className="font-semibold">Camera Error</p>
+          <p className="text-sm">{error}</p>
+          <p className="text-sm mt-2">Please allow camera access in your browser settings.</p>
+        </div>
+      )}
+
+      {isScanning && !error && (
+        <p className="text-center text-sm text-gray-600">
+          Point your camera at the QR code
+        </p>
+      )}
+    </div>
+  );
 }
