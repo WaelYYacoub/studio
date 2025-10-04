@@ -56,10 +56,13 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
       return await toPng(cardRef.current, {
         cacheBust: true,
         skipFonts: true,
+        pixelRatio: 2,
         style: {
           background: "white",
           fontFamily: "sans-serif",
         },
+        canvasWidth: cardRef.current.offsetWidth + 40,
+        canvasHeight: cardRef.current.offsetHeight + 40,
         filter: (node) => {
           if (node.tagName === "STYLE" || node.tagName === "LINK") {
             return false;
