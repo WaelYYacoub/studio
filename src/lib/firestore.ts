@@ -4,12 +4,13 @@ import { getFirestore, serverTimestamp, Timestamp, type DocumentData, type Fires
 import type { AppUser, Pass, Role } from "@/types";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FB_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FB_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FB_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FB_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FB_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FB_APP_ID,
+  apiKey: "AIzaSyDzcqs6xqG9yoz6gIjStQLQOX7K00gG41E",
+  authDomain: "guardian-e6f28.firebaseapp.com",
+  projectId: "guardian-e6f28",
+  storageBucket: "guardian-e6f28.firebasestorage.app",
+  messagingSenderId: "820767061705",
+  appId: "1:820767061705:web:fb36dd35ae9e53df25ff18",
+  measurementId: "G-VZSVZKZE0K"
 };
 
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

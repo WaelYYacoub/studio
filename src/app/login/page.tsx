@@ -1,34 +1,38 @@
-import { Suspense } from 'react';
-import { LoginForm } from '@/components/forms/login-form';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+"use client";
 
-function PendingAlert() {
-  const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const isPending = params?.get('pending') === '1';
+import { useSearchParams } from "next/navigation";
+import { LoginForm } from "@/components/forms/login-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Clock, Mail } from "lucide-react";
+import { Suspense } from "react";
 
-  if (!isPending) {
-    return null;
-  }
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const isPending = searchParams.get("pending") === "1";
 
   return (
-    <Alert className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800">
-      <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-      <AlertTitle className="text-yellow-800 dark:text-yellow-300">Awaiting Approval</AlertTitle>
-      <AlertDescription className="text-yellow-700 dark:text-yellow-400">
-        Your account is pending approval from an administrator. You will be able to log in once your account has been approved.
-      </AlertDescription>
-    </Alert>
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
+        {isPending && (
+          <Alert className="border-yellow-500 bg-yellow-50">
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Account Pending Approval</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              Your account has been created successfully and is awaiting administrator approval. 
+              You will receive an email notification once your account is activated.
+            </AlertDescription>
+          </Alert>
+        )}
+        <LoginForm />
+      </div>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <>
-      <Suspense>
-        <PendingAlert />
-      </Suspense>
-      <LoginForm />
-    </>
+    <Suspense fallback={<div className="container flex h-screen w-screen flex-col items-center justify-center">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db, passConverter } from "@/lib/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -92,12 +92,20 @@ export default function GenerateVisitorForm() {
         createdByCompany: user.company,
       };
 
+      // Step 1: Create document in Firestore
       const docRef = await addDoc(passCollection, newPassData as any);
 
+      // Step 2: Build qrPayload with the generated document ID
+      const qrPayload = buildQrPayload(docRef.id, values.plateAlpha, values.plateNum, expiresAt);
+
+      // Step 3: Update Firestore document with qrPayload
+      await updateDoc(docRef, { qrPayload });
+
+      // Step 4: Prepare data for preview dialog
       const finalPassData = {
         ...newPassData,
         id: docRef.id,
-        qrPayload: buildQrPayload(docRef.id, values.plateAlpha, values.plateNum, expiresAt),
+        qrPayload: qrPayload,
         createdAt: new Date(),
         expiresAt: expiresAt,
       };
