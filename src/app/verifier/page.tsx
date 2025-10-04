@@ -25,8 +25,12 @@ export default function VerifierPage() {
   const [isValidating, setIsValidating] = useState(false);
 
   const handleScanSuccess = async (decodedText: string) => {
+    // Prevent duplicate scans
+    if (isValidating || scannedPass) return;
+    
     console.log("Processing scanned QR:", decodedText);
     setIsValidating(true);
+    setIsScannerOpen(false); // Close scanner immediately
 
     try {
       // Parse QR data
@@ -55,13 +59,11 @@ export default function VerifierPage() {
         passData.expired = true;
       }
 
-      // Close scanner and show result
-      setIsScannerOpen(false);
+      // Show result
       setScannedPass({ id: passSnap.id, ...passData });
     } catch (error: any) {
       console.error("Validation error:", error);
       alert(`Scan failed: ${error.message}`);
-      setIsScannerOpen(false);
     } finally {
       setIsValidating(false);
     }
@@ -90,16 +92,16 @@ export default function VerifierPage() {
             </p>
           </div>
 
-{/* Show scan result in dialog */}
-<Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
-  <DialogContent className="sm:max-w-[500px]">
-    <DialogHeader>
-      <DialogTitle>Verification Result</DialogTitle>
-      <DialogDescription>Pass validation complete</DialogDescription>
-    </DialogHeader>
-    {scannedPass && <PassDetails pass={scannedPass} />}
-  </DialogContent>
-</Dialog>
+          {/* Show scan result in dialog */}
+          <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Verification Result</DialogTitle>
+                <DialogDescription>Pass validation complete</DialogDescription>
+              </DialogHeader>
+              {scannedPass && <PassDetails pass={scannedPass} />}
+            </DialogContent>
+          </Dialog>
 
           <Card>
             <CardHeader>
