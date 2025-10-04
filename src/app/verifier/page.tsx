@@ -90,9 +90,13 @@ export default function VerifierPage() {
             </p>
           </div>
 
-          {/* Show scan result in dialog */}
+{/* Show scan result in dialog */}
 <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
   <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+      <DialogTitle>Verification Result</DialogTitle>
+      <DialogDescription>Pass validation complete</DialogDescription>
+    </DialogHeader>
     {scannedPass && <PassDetails pass={scannedPass} />}
   </DialogContent>
 </Dialog>
