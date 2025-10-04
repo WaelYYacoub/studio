@@ -6,9 +6,8 @@ import {
   useEffect,
   type ReactNode,
   useContext,
-  useCallback,
 } from "react";
-import { collection, query, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db, passConverter, userConverter } from "@/lib/firestore";
 import type { AppUser, Pass } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -28,41 +27,61 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      const passesQuery = query(collection(db, "passes"), orderBy("createdAt", "desc")).withConverter(passConverter);
-      const passesSnapshot = await getDocs(passesQuery);
-      const passesData = passesSnapshot.docs.map(doc => doc.data());
-      setPasses(passesData);
-
-      const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc")).withConverter(userConverter);
-      const usersSnapshot = await getDocs(usersQuery);
-      const usersData = usersSnapshot.docs.map(doc => doc.data());
-      setUsers(usersData);
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
   useEffect(() => {
-    if (user) {
-      fetchData();
-    } else {
-      // Clear data on logout
+    if (!user) {
       setPasses([]);
       setUsers([]);
       setLoading(false);
+      return;
     }
-  }, [user, fetchData]);
+
+    setLoading(true);
+
+    // Real-time listener for passes
+    const passesQuery = query(
+      collection(db, "passes"),
+      orderBy("createdAt", "desc")
+    ).withConverter(passConverter);
+
+    const unsubscribePasses = onSnapshot(
+      passesQuery,
+      (snapshot) => {
+        const passesData = snapshot.docs.map((doc) => doc.data());
+        setPasses(passesData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching passes:", error);
+        setLoading(false);
+      }
+    );
+
+    // Real-time listener for users
+    const usersQuery = query(
+      collection(db, "users"),
+      orderBy("createdAt", "desc")
+    ).withConverter(userConverter);
+
+    const unsubscribeUsers = onSnapshot(
+      usersQuery,
+      (snapshot) => {
+        const usersData = snapshot.docs.map((doc) => doc.data());
+        setUsers(usersData);
+      },
+      (error) => {
+        console.error("Error fetching users:", error);
+      }
+    );
+
+    // Cleanup listeners on unmount
+    return () => {
+      unsubscribePasses();
+      unsubscribeUsers();
+    };
+  }, [user]);
 
   const refreshData = () => {
-    fetchData();
+    console.log("Data is real-time, no manual refresh needed");
   };
 
   const value = { passes, users, loading, refreshData };
