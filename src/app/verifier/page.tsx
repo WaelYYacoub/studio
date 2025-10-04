@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firestore';
 
 export default function VerifierPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
