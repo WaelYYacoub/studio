@@ -35,6 +35,21 @@ export function UsersTable() {
     }
   };
 
+  const getRowBackground = (role: Role) => {
+    switch (role) {
+      case "pending":
+        return "bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-950/70";
+      case "user":
+        return "bg-green-50 hover:bg-green-100 dark:bg-green-950/50 dark:hover:bg-green-950/70";
+      case "admin":
+        return "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-950/70";
+      case "rejected":
+        return "bg-gray-100 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800";
+      default:
+        return "";
+    }
+  };
+
   const displayUsers = users.filter(user => user.role !== 'owner');
 
   return (
@@ -54,22 +69,24 @@ export function UsersTable() {
         <TableBody>
           {loading ? (
             <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                </TableCell>
+              <TableCell colSpan={5} className="h-24 text-center">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+              </TableCell>
             </TableRow>
           ) : displayUsers.length > 0 ? (
             displayUsers.map((user) => (
-              <TableRow key={user.uid}>
+              <TableRow key={user.uid} className={getRowBackground(user.role)}>
                 <TableCell className="font-medium">{user.fullName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.company}</TableCell>
                 <TableCell>
-                  <Badge variant={getRoleVariant(user.role)} className="capitalize">{user.role}</Badge>
+                  <Badge variant={getRoleVariant(user.role)} className="capitalize">
+                    {user.role}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   {currentUser?.uid !== user.uid && user.role !== 'owner' && (
-                     <UsersTableActions user={user} />
+                    <UsersTableActions user={user} />
                   )}
                 </TableCell>
               </TableRow>
