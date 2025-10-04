@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRef, useCallback } from "react";
 import { toPng } from 'html-to-image';
 
-
 interface PassPreviewDialogProps {
   pass: Pass;
   open: boolean;
@@ -69,12 +68,11 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
         },
       });
     } catch (err) {
-      console.error("❌ Failed to export card:", err);
+      console.error("Failed to export card:", err);
       toast({ variant: "destructive", title: "Error", description: "Could not export pass card." });
       return null;
     }
   }, [cardRef, toast]);
-
 
   const handleDownload = useCallback(async () => {
     const dataUrl = await exportCard();
@@ -85,13 +83,12 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
     link.href = dataUrl;
     link.click();
     toast({ title: "Success", description: "QR code card downloaded." });
-  }, [exportCard, pass]);
-
+  }, [exportCard, pass, toast]);
 
   const handleShare = async () => {
     const dataUrl = await exportCard();
     if (!dataUrl) return;
-    
+
     try {
       const blob = await(await fetch(dataUrl)).blob();
       const file = new File([blob], `qr-pass-${pass.plateAlpha}-${pass.plateNum}.png`, { type: blob.type });
@@ -115,12 +112,12 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
         toast({ variant: "destructive", title: "Error", description: "Could not share pass." });
     }
   };
-  
+
   const getPassDate = (date: any): Date => {
-    if (date.toDate) { // It's a Firestore Timestamp
+    if (date.toDate) {
       return date.toDate();
     }
-    return new Date(date); // It's likely already a Date or a string
+    return new Date(date);
   }
 
   return (
@@ -167,9 +164,8 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     <span className="details-value" style={{textTransform: 'none'}}>{format(getPassDate(pass.expiresAt), "PPP, p")}</span>
                 </div>
 
-                <div ref={cardRef} className="qr-container mt-6 inline-flex flex-col items-center gap-2 rounded-lg border p-4 bg-white">
+                <div ref={cardRef} className="mt-6 flex justify-center">
                     <QrCodeDisplay payload={pass.qrPayload} />
-                    <p className="qr-plate text-xs text-muted-foreground">{pass.plateAlpha}-{pass.plateNum}</p>
                 </div>
             </div>
         </div>
