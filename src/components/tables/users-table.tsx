@@ -19,34 +19,20 @@ export function UsersTable() {
   const { users, loading } = useData();
   const { user: currentUser } = useAuth();
 
-  const getRoleVariant = (role: Role) => {
+  const getRoleBadgeClass = (role: Role) => {
     switch (role) {
+      case "pending":
+        return "bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-200";
+      case "user":
+        return "bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-200";
+      case "admin":
+        return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200";
       case "owner":
-      case "admin":
-        return "default";
-      case "user":
-        return "secondary";
-      case "pending":
-        return "outline";
+        return "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-200";
       case "rejected":
-        return "destructive";
+        return "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900 dark:text-gray-200";
       default:
-        return "outline";
-    }
-  };
-
-  const getRowBackground = (role: Role) => {
-    switch (role) {
-      case "pending":
-        return "bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-950/70";
-      case "user":
-        return "bg-green-50 hover:bg-green-100 dark:bg-green-950/50 dark:hover:bg-green-950/70";
-      case "admin":
-        return "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-950/70";
-      case "rejected":
-        return "bg-gray-100 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800";
-      default:
-        return "";
+        return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
 
@@ -75,12 +61,12 @@ export function UsersTable() {
             </TableRow>
           ) : displayUsers.length > 0 ? (
             displayUsers.map((user) => (
-              <TableRow key={user.uid} className={getRowBackground(user.role)}>
+              <TableRow key={user.uid}>
                 <TableCell className="font-medium">{user.fullName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.company}</TableCell>
                 <TableCell>
-                  <Badge variant={getRoleVariant(user.role)} className="capitalize">
+                  <Badge className={`capitalize ${getRoleBadgeClass(user.role)}`}>
                     {user.role}
                   </Badge>
                 </TableCell>
