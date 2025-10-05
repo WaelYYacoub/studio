@@ -1,18 +1,5 @@
-"use client";
+﻿import { redirect } from 'next/navigation';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-export default function DashboardPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/admin/dashboard/generate");
-  }, [router]);
-
-  return (
-    <div className="flex h-full items-center justify-center">
-      <p>Loading dashboard...</p>
-    </div>
-  );
+export default function DashboardHome() {
+  redirect('/admin/dashboard/records');
 }
