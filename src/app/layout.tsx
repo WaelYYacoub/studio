@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { AuthProvider } from '@/context/auth-provider';
 import { DataProvider } from '@/context/data-provider';
 import { Toaster } from '@/components/ui/toaster';

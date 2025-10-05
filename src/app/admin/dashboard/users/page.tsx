@@ -1,4 +1,4 @@
-import { UsersTable } from '@/components/tables/users-table';
+﻿import { UsersTable } from '@/components/tables/users-table';
 import RoleGate from '@/components/auth/role-gate';
 import { Suspense } from 'react';
 
