@@ -18,7 +18,7 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/data-provider";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,15 +59,13 @@ export function RecordsTable() {
     })
   }, [allPasses, filters]);
 
+  const totalPages = Math.ceil(filteredPasses.length / PAGE_SIZE);
+
   const paginatedPasses = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
     return filteredPasses.slice(start, end);
   }, [filteredPasses, currentPage]);
-
-  const hasMore = useMemo(() => {
-    return currentPage * PAGE_SIZE < filteredPasses.length;
-  }, [currentPage, filteredPasses]);
 
   const handleFilterChange = (key: keyof typeof filters, value: any) => {
       setCurrentPage(1);
@@ -98,7 +96,7 @@ export function RecordsTable() {
       case "active":
         return "default";
       case "expired":
-      return "destructive";
+        return "destructive";
       case "revoked":
         return "destructive";
       default:
@@ -224,14 +222,34 @@ export function RecordsTable() {
           </TableBody>
         </Table>
       </div>
-      {hasMore && (
-        <div className="text-center">
-          <Button onClick={() => setCurrentPage(p => p + 1)} >
-            Load More
-          </Button>
+      
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages} ({filteredPasses.length} total passes)
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
   );
 }
-
