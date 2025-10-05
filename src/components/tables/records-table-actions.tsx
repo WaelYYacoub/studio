@@ -1,5 +1,4 @@
-"use client";
-
+﻿"use client";
 import { MoreHorizontal, Ban, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firestore";
-import type { Pass } from "@/types";
+import type { Pass, PassStatus } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import RoleGate from "../auth/role-gate";
 import { useState } from "react";
@@ -20,9 +19,10 @@ import PassPreviewDialog from "../forms/pass-preview-dialog";
 
 interface RecordsTableActionsProps {
   pass: Pass;
+  actualStatus: PassStatus;
 }
 
-export function RecordsTableActions({ pass }: RecordsTableActionsProps) {
+export function RecordsTableActions({ pass, actualStatus }: RecordsTableActionsProps) {
   const { toast } = useToast();
   const [showPreview, setShowPreview] = useState(false);
 
@@ -33,7 +33,7 @@ export function RecordsTableActions({ pass }: RecordsTableActionsProps) {
       await updateDoc(passRef, { status: "revoked" });
       toast({
         title: "Pass Revoked",
-        description: `Pass for plate ${pass.plateAlpha}-${pass.plateNum} has been revoked.`,
+        description: Pass for plate - has been revoked.,
       });
     } catch (error) {
       toast({
@@ -49,7 +49,7 @@ export function RecordsTableActions({ pass }: RecordsTableActionsProps) {
       await deleteDoc(doc(db, "passes", pass.id));
       toast({
         title: "Pass Deleted",
-        description: `Pass for plate ${pass.plateAlpha}-${pass.plateNum} has been permanently deleted.`,
+        description: Pass for plate - has been permanently deleted.,
       });
     } catch (error) {
        toast({
@@ -59,7 +59,6 @@ export function RecordsTableActions({ pass }: RecordsTableActionsProps) {
       });
     }
   };
-
 
   return (
     <>
@@ -76,9 +75,13 @@ export function RecordsTableActions({ pass }: RecordsTableActionsProps) {
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </DropdownMenuItem>
-          <RoleGate allowedRoles={["admin", "owner"]}>
+          <RoleGate allowedRoles={["admin", "owner", "user"]}>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleRevoke} disabled={pass.status === 'revoked'} className="text-orange-600 focus:text-orange-600">
+            <DropdownMenuItem 
+              onClick={handleRevoke} 
+              disabled={actualStatus === 'revoked' || actualStatus === 'expired'} 
+              className="text-orange-600 focus:text-orange-600"
+            >
               <Ban className="mr-2 h-4 w-4" />
               Revoke
             </DropdownMenuItem>

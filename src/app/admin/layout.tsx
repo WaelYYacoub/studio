@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, handleSignOut, role } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(true);
 
   const visibleNavLinks = NAV_LINKS.filter(link => {
@@ -149,3 +149,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </AuthGate>
   );
 }
+
+

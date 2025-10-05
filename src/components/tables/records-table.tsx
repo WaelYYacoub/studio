@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import type { Pass, PassStatus } from "@/types";
@@ -25,6 +25,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const PAGE_SIZE = 10;
 
+// Helper to calculate actual status based on expiry
+const getActualStatus = (pass: Pass): PassStatus => {
+  if (pass.status === "revoked") return "revoked";
+  const now = new Date();
+  const expiryDate = pass.expiresAt.toDate();
+  return expiryDate < now ? "expired" : "active";
+};
+
 export function RecordsTable() {
   const { passes: allPasses, users, loading: dataLoading } = useData();
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,11 +46,12 @@ export function RecordsTable() {
 
   const filteredPasses = useMemo(() => {
     return allPasses.filter(pass => {
-      if (filters.status !== 'all' && pass.status !== filters.status) return false;
-      
+      const actualStatus = getActualStatus(pass);
+      if (filters.status !== 'all' && actualStatus !== filters.status) return false;
+
       const companyMatch = pass.type === 'standard' ? pass.ownerCompany : pass.createdByCompany;
       if (filters.company && !companyMatch?.toLowerCase().includes(filters.company.toLowerCase())) return false;
-      
+
       if (filters.createdAt && pass.createdAt.toDate() < filters.createdAt) return false;
       if (filters.expiresAt && pass.expiresAt.toDate() > filters.expiresAt) return false;
 
@@ -55,17 +64,16 @@ export function RecordsTable() {
     const end = start + PAGE_SIZE;
     return filteredPasses.slice(start, end);
   }, [filteredPasses, currentPage]);
-  
+
   const hasMore = useMemo(() => {
     return currentPage * PAGE_SIZE < filteredPasses.length;
   }, [currentPage, filteredPasses]);
-
 
   const handleFilterChange = (key: keyof typeof filters, value: any) => {
       setCurrentPage(1);
       setFilters(prev => ({...prev, [key]: value}));
   }
-  
+
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     const newSelection: Record<string, boolean> = {};
     if (checked === true) {
@@ -101,7 +109,7 @@ export function RecordsTable() {
   return (
     <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Input 
+            <Input
                 placeholder="Filter by company..."
                 value={filters.company}
                 onChange={(e) => handleFilterChange('company', e.target.value)}
@@ -172,6 +180,7 @@ export function RecordsTable() {
             ) : paginatedPasses.length > 0 ? (
               paginatedPasses.map((pass) => {
                 const creator = users.find(u => u.uid === pass.createdBy);
+                const actualStatus = getActualStatus(pass);
                 return (
                   <TableRow key={pass.id} data-state={rowSelection[pass.id] && 'selected'}>
                     <TableCell>
@@ -191,7 +200,7 @@ export function RecordsTable() {
                       {pass.type === "standard" ? pass.ownerCompany : pass.createdByCompany}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(pass.status)}>{pass.status}</Badge>
+                      <Badge variant={getStatusVariant(actualStatus)}>{actualStatus}</Badge>
                     </TableCell>
                     <TableCell>
                       {format(pass.expiresAt.toDate(), "PP")}
@@ -200,7 +209,7 @@ export function RecordsTable() {
                       {creator?.fullName || "N/A"}
                     </TableCell>
                     <TableCell>
-                      <RecordsTableActions pass={pass} />
+                      <RecordsTableActions pass={pass} actualStatus={actualStatus} />
                     </TableCell>
                   </TableRow>
                 )
