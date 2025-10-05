@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <div className={cn("flex h-full flex-col overflow-hidden transition-opacity duration-300", sidebarOpen ? "opacity-100" : "opacity-0")}>
               <div className="flex h-16 items-center gap-2 border-b px-6">
                 <ShieldCheck className="h-6 w-6 text-primary flex-shrink-0" />
-                <span className="font-headline text-lg font-bold whitespace-nowrap">GuardianGate</span>
+                <span className="font-headline text-lg font-bold whitespace-nowrap">Guardian Gate</span>
               </div>
               
               <nav className="flex-1 space-y-1 overflow-y-auto p-4">
@@ -149,5 +149,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </AuthGate>
   );
 }
+
 
 

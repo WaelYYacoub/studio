@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 import Image from 'next/image';
 import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <div className="mb-4 rounded-full bg-primary p-3 text-primary-foreground">
                 <ShieldCheck className="h-8 w-8" />
             </div>
-            <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">GuardianGate</h1>
+            <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">Guardian Gate</h1>
             <p className="mt-1 text-muted-foreground">Secure Access Management</p>
         </div>
         {children}
@@ -25,3 +25,4 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+

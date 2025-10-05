@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GuardianGate',
+  title: 'Guardian Gate',
   description: 'Secure Access Management by Gate Pass Guardian',
 };
 
@@ -32,3 +32,4 @@ export default function RootLayout({
     </html>
   );
 }
+

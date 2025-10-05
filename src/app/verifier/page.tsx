@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ShieldCheck, QrCode } from 'lucide-react';
 import ManualSearch from '@/components/verifier/manual-search';
@@ -75,7 +75,7 @@ export default function VerifierPage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-7 w-7 text-primary" />
-            <span className="font-headline text-xl font-bold">GuardianGate Verifier</span>
+            <span className="font-headline text-xl font-bold">Guardian Gate Verifier</span>
           </div>
           <Button asChild>
             <Link href="/login">Sign In</Link>
