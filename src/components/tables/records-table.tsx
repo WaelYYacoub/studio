@@ -98,7 +98,7 @@ export function RecordsTable() {
       case "active":
         return "default";
       case "expired":
-        return "secondary";
+      return "destructive";
       case "revoked":
         return "destructive";
       default:
@@ -234,3 +234,4 @@ export function RecordsTable() {
     </div>
   );
 }
+
