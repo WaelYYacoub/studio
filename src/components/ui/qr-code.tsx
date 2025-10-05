@@ -16,7 +16,6 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
       if (!canvasRef.current) return;
 
       try {
-        // SAFETY CHECK: Ensure payload exists and is valid
         if (!payload || Object.keys(payload).length === 0) {
           console.error("QR payload is empty or undefined:", payload);
           
@@ -36,10 +35,9 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
         const qrData = JSON.stringify(payload);
         console.log("Generating QR with data:", qrData);
 
-        // Generate QR code with larger margin for cleaner look
         await QRCode.toCanvas(canvasRef.current, qrData, {
           width: size,
-          margin: 2, // Increased margin for cleaner appearance
+          margin: 2,
           errorCorrectionLevel: 'M',
           color: {
             dark: "#000000",
@@ -66,21 +64,20 @@ export default function QrCodeDisplay({ payload, size = 200 }: QrCodeDisplayProp
     generateQR();
   }, [payload, size]);
 
-  // Extract plate number from payload
   const plateNumber = payload?.pa && payload?.pn 
     ? `${payload.pa.toUpperCase()}-${payload.pn}` 
     : null;
 
   return (
-    <div className="inline-flex flex-col items-center gap-3 p-4 bg-white border-2 border-gray-200 rounded-lg shadow-sm">
+    <div className="inline-flex flex-col items-center gap-4 p-6 bg-white border-[3px] border-gray-300 rounded-xl shadow-sm">
       <canvas 
         ref={canvasRef} 
         width={size} 
         height={size} 
-        className="rounded-md"
+        className="rounded-sm"
       />
       {plateNumber && (
-        <div className="text-center font-mono font-bold text-lg tracking-wider text-gray-800">
+        <div className="font-mono font-semibold text-xl tracking-widest text-gray-800">
           {plateNumber}
         </div>
       )}
