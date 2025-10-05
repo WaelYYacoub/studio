@@ -112,7 +112,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className="flex-shrink-0">
                   {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </Button>
-                <h2 className="text-lg font-semibold">Dashboard</h2>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Welcome, {user?.fullName || "User"}</span>
+                  <h2 className="text-lg font-semibold">Dashboard</h2>
+                </div>
               </div>
               
               <DropdownMenu>
@@ -149,6 +152,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </AuthGate>
   );
 }
+
 
 
 
