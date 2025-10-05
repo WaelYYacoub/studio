@@ -1,0 +1,439 @@
+
+========================================
+
+FILE: src\types\index.ts
+
+========================================
+
+
+import type { Timestamp } from "firebase/firestore";
+
+export type Role = 'owner' | 'admin' | 'user' | 'pending' | 'rejected';
+export type PassStatus = 'active' | 'expired' | 'revoked';
+export type PassType = 'standard' | 'visitor';
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  company?: string;
+  companyId?: string;
+  workLocation?: string;
+  role: Role;
+  createdAt: any;
+  approvedBy?: string | null;
+  approvedAt?: Timestamp | null;
+}
+
+export interface QrPayload {
+    v: 1;
+    pid: string;
+    pa: string;
+    pn: string;
+    exp: number;
+}
+
+export interface BasePass {
+  id: string;
+  type: PassType;
+  plateAlpha: string;
+  plateNum: string;
+  location: string;
+  expiresAt: Timestamp;
+  status: PassStatus;
+  createdAt: any;
+  createdBy: string;
+  createdByName: string;
+  createdByCompany?: string;
+  qrPayload: QrPayload;
+}
+
+export interface StandardPass extends BasePass {
+  type: 'standard';
+  ownerName: string;
+  serial: string;
+  ownerCompany: string;
+}
+
+export interface VisitorPass extends BasePass {
+  type: 'visitor';
+  visitorName: string;
+  personToVisit: string;
+  purpose: string;
+}
+
+export type Pass = StandardPass | VisitorPass;
+
+========================================
+
+FILE: src\lib\firestore.ts
+
+========================================
+
+
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore, serverTimestamp, Timestamp, type DocumentData, type FirestoreDataConverter, type QueryDocumentSnapshot, type SnapshotOptions } from "firebase/firestore";
+import type { AppUser, Pass, Role } from "@/types";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDzcqs6xqG9yoz6gIjStQLQOX7K00gG41E",
+  authDomain: "guardian-e6f28.firebaseapp.com",
+  projectId: "guardian-e6f28",
+  storageBucket: "guardian-e6f28.firebasestorage.app",
+  messagingSenderId: "820767061705",
+  appId: "1:820767061705:web:fb36dd35ae9e53df25ff18",
+  measurementId: "G-VZSVZKZE0K"
+};
+
+export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const ts = serverTimestamp;
+
+export const userConverter: FirestoreDataConverter<AppUser> = {
+  toFirestore: (user: AppUser): DocumentData => {
+    return { ...user };
+  },
+  fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): AppUser => {
+    const data = snapshot.data(options);
+    return {
+      uid: snapshot.id,
+      email: data.email,
+      fullName: data.fullName,
+      phone: data.phone,
+      company: data.company,
+      companyId: data.companyId,
+      workLocation: data.workLocation,
+      role: data.role as Role,
+      createdAt: data.createdAt,
+      approvedBy: data.approvedBy,
+      approvedAt: data.approvedAt,
+    };
+  },
+};
+
+export const passConverter: FirestoreDataConverter<Pass> = {
+    toFirestore: (pass: Pass): DocumentData => {
+      const { id, ...data } = pass;
+      return data;
+    },
+    fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): Pass => {
+        const data = snapshot.data(options);
+        const baseData = {
+            id: snapshot.id,
+            type: data.type,
+            plateAlpha: data.plateAlpha,
+            plateNum: data.plateNum,
+            location: data.location,
+            expiresAt: data.expiresAt instanceof Timestamp ? data.expiresAt : new Timestamp(data.expiresAt.seconds, data.expiresAt.nanoseconds),
+            status: data.status,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt : new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds),
+            createdBy: data.createdBy,
+            createdByName: data.createdByName,
+            createdByCompany: data.createdByCompany,
+            qrPayload: data.qrPayload,
+        };
+
+        if (data.type === 'standard') {
+            return {
+                ...baseData,
+                type: 'standard',
+                ownerName: data.ownerName,
+                serial: data.serial,
+                ownerCompany: data.ownerCompany,
+            };
+        } else {
+             return {
+                ...baseData,
+                type: 'visitor',
+                visitorName: data.visitorName,
+                personToVisit: data.personToVisit,
+                purpose: data.purpose,
+            };
+        }
+    },
+};
+
+========================================
+
+FILE: src\components\auth\auth-gate.tsx
+
+========================================
+
+
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+
+export default function AuthGate({ children }: { children: ReactNode }) {
+  const { user, loading, role } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (role === "pending" || role === "rejected") {
+        router.replace("/login?pending=1");
+      }
+    }
+  }, [user, loading, role, router]);
+
+  if (loading || !user || !role || role === 'pending' || role === 'rejected') {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+========================================
+
+FILE: src\components\auth\role-gate.tsx
+
+========================================
+
+
+"use client";
+
+import type { ReactNode } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import type { Role } from "@/types";
+
+interface RoleGateProps {
+  children: ReactNode;
+  allowedRoles: Role[];
+}
+
+export default function RoleGate({ children, allowedRoles }: RoleGateProps) {
+  const { role } = useAuth();
+
+  if (!role || !allowedRoles.includes(role)) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+========================================
+
+FILE: src\app\layout.tsx
+
+========================================
+
+
+import type { Metadata } from 'next';
+import { AuthProvider } from '@/context/auth-provider';
+import { Toaster } from '@/components/ui/toaster';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'GuardianGate',
+  description: 'Secure Access Management by Gate Pass Guardian',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-body antialiased">
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+
+========================================
+
+FILE: src\app\globals.css
+
+========================================
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 262 80% 98%;
+    --foreground: 262 25% 15%;
+    --card: 262 80% 98%;
+    --card-foreground: 262 25% 15%;
+    --popover: 262 80% 98%;
+    --popover-foreground: 262 25% 15%;
+    --primary: 262 52% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 261 35% 89%;
+    --secondary-foreground: 262 35% 30%;
+    --muted: 262 60% 94%;
+    --muted-foreground: 262 25% 45%;
+    --accent: 231 48% 51%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 262 40% 85%;
+    --input: 262 60% 94%;
+    --ring: 262 52% 47%;
+    --chart-1: 262 52% 47%;
+    --chart-2: 231 48% 51%;
+    --chart-3: 262 40% 67%;
+    --chart-4: 231 38% 71%;
+    --chart-5: 262 30% 57%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 262 20% 10%;
+    --foreground: 262 40% 95%;
+    --card: 262 20% 10%;
+    --card-foreground: 262 40% 95%;
+    --popover: 262 20% 10%;
+    --popover-foreground: 262 40% 95%;
+    --primary: 262 62% 57%;
+    --primary-foreground: 262 20% 10%;
+    --secondary: 262 20% 20%;
+    --secondary-foreground: 262 40% 95%;
+    --muted: 262 20% 15%;
+    --muted-foreground: 262 40% 60%;
+    --accent: 231 58% 61%;
+    --accent-foreground: 231 20% 10%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 262 20% 25%;
+    --input: 262 20% 20%;
+    --ring: 262 62% 57%;
+    --chart-1: 262 62% 57%;
+    --chart-2: 231 58% 61%;
+    --chart-3: 262 50% 77%;
+    --chart-4: 231 48% 81%;
+    --chart-5: 262 40% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  @keyframes scan-y {
+    0%, 100% { top: 0%; }
+    50% { top: 100%; }
+  }
+  .animate-scan-y {
+    animation: scan-y 2.5s ease-in-out infinite;
+  }
+}
+
+========================================
+
+FILE: src\app\page.tsx
+
+========================================
+
+
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+
+export default function HomePage() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.replace("/verifier");
+  }, [router]);
+  
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+========================================
+
+FILE: src\app\signup\page.tsx
+
+========================================
+
+
+import { SignupForm } from '@/components/forms/signup-form';
+
+export default function SignupPage() {
+    return <SignupForm />;
+}
+
+========================================
+
+FILE: src\app\login\page.tsx
+
+========================================
+
+
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { LoginForm } from "@/components/forms/login-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Clock, Mail } from "lucide-react";
+import { Suspense } from "react";
+
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const isPending = searchParams.get("pending") === "1";
+
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
+        {isPending && (
+          <Alert className="border-yellow-500 bg-yellow-50">
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Account Pending Approval</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              Your account has been created successfully and is awaiting administrator approval. 
+              You will receive an email notification once your account is activated.
+            </AlertDescription>
+          </Alert>
+        )}
+        <LoginForm />
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="container flex h-screen w-screen flex-col items-center justify-center">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
+  );
+}

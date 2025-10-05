@@ -1,0 +1,1881 @@
+
+========================================
+
+FILE: src\types\index.ts
+
+========================================
+
+
+import type { Timestamp } from "firebase/firestore";
+
+export type Role = 'owner' | 'admin' | 'user' | 'pending' | 'rejected';
+export type PassStatus = 'active' | 'expired' | 'revoked';
+export type PassType = 'standard' | 'visitor';
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  company?: string;
+  companyId?: string;
+  workLocation?: string;
+  role: Role;
+  createdAt: any;
+  approvedBy?: string | null;
+  approvedAt?: Timestamp | null;
+}
+
+export interface QrPayload {
+    v: 1;
+    pid: string;
+    pa: string;
+    pn: string;
+    exp: number;
+}
+
+export interface BasePass {
+  id: string;
+  type: PassType;
+  plateAlpha: string;
+  plateNum: string;
+  location: string;
+  expiresAt: Timestamp;
+  status: PassStatus;
+  createdAt: any;
+  createdBy: string;
+  createdByName: string;
+  createdByCompany?: string;
+  qrPayload: QrPayload;
+}
+
+export interface StandardPass extends BasePass {
+  type: 'standard';
+  ownerName: string;
+  serial: string;
+  ownerCompany: string;
+}
+
+export interface VisitorPass extends BasePass {
+  type: 'visitor';
+  visitorName: string;
+  personToVisit: string;
+  purpose: string;
+}
+
+export type Pass = StandardPass | VisitorPass;
+
+========================================
+
+FILE: src\lib\firestore.ts
+
+========================================
+
+
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore, serverTimestamp, Timestamp, type DocumentData, type FirestoreDataConverter, type QueryDocumentSnapshot, type SnapshotOptions } from "firebase/firestore";
+import type { AppUser, Pass, Role } from "@/types";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDzcqs6xqG9yoz6gIjStQLQOX7K00gG41E",
+  authDomain: "guardian-e6f28.firebaseapp.com",
+  projectId: "guardian-e6f28",
+  storageBucket: "guardian-e6f28.firebasestorage.app",
+  messagingSenderId: "820767061705",
+  appId: "1:820767061705:web:fb36dd35ae9e53df25ff18",
+  measurementId: "G-VZSVZKZE0K"
+};
+
+export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const ts = serverTimestamp;
+
+export const userConverter: FirestoreDataConverter<AppUser> = {
+  toFirestore: (user: AppUser): DocumentData => {
+    return { ...user };
+  },
+  fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): AppUser => {
+    const data = snapshot.data(options);
+    return {
+      uid: snapshot.id,
+      email: data.email,
+      fullName: data.fullName,
+      phone: data.phone,
+      company: data.company,
+      companyId: data.companyId,
+      workLocation: data.workLocation,
+      role: data.role as Role,
+      createdAt: data.createdAt,
+      approvedBy: data.approvedBy,
+      approvedAt: data.approvedAt,
+    };
+  },
+};
+
+export const passConverter: FirestoreDataConverter<Pass> = {
+    toFirestore: (pass: Pass): DocumentData => {
+      const { id, ...data } = pass;
+      return data;
+    },
+    fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): Pass => {
+        const data = snapshot.data(options);
+        const baseData = {
+            id: snapshot.id,
+            type: data.type,
+            plateAlpha: data.plateAlpha,
+            plateNum: data.plateNum,
+            location: data.location,
+            expiresAt: data.expiresAt instanceof Timestamp ? data.expiresAt : new Timestamp(data.expiresAt.seconds, data.expiresAt.nanoseconds),
+            status: data.status,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt : new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds),
+            createdBy: data.createdBy,
+            createdByName: data.createdByName,
+            createdByCompany: data.createdByCompany,
+            qrPayload: data.qrPayload,
+        };
+
+        if (data.type === 'standard') {
+            return {
+                ...baseData,
+                type: 'standard',
+                ownerName: data.ownerName,
+                serial: data.serial,
+                ownerCompany: data.ownerCompany,
+            };
+        } else {
+             return {
+                ...baseData,
+                type: 'visitor',
+                visitorName: data.visitorName,
+                personToVisit: data.personToVisit,
+                purpose: data.purpose,
+            };
+        }
+    },
+};
+
+========================================
+
+FILE: src\lib\constants.ts
+
+========================================
+
+
+import {
+  LayoutDashboard,
+  PlusCircle,
+  Search,
+  ListOrdered,
+  BarChart2,
+  Users,
+} from "lucide-react";
+
+export const NAV_LINKS = [
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/dashboard/records", label: "Records", icon: ListOrdered },
+  { href: "/admin/dashboard/generate", label: "Generate", icon: PlusCircle },
+  { href: "/admin/dashboard/search", label: "Search", icon: Search },
+  { href: "/admin/dashboard/statistics", label: "Statistics", icon: BarChart2 },
+  { href: "/admin/dashboard/users", label: "Users", icon: Users },
+];
+
+========================================
+
+FILE: src\lib\qr.ts
+
+========================================
+
+
+export const buildQrPayload = (passId: string, plateAlpha: string, plateNum: string, expiresAt: Date) => {
+    return {
+        v: 1,
+        pid: passId,
+        pa: plateAlpha,
+        pn: plateNum,
+        exp: Math.floor(expiresAt.getTime() / 1000)
+    };
+};
+
+========================================
+
+FILE: src\lib\email.ts
+
+========================================
+
+
+/**
+ * Email Notification Service for Gate Pass Management System
+ * 
+ * Sends automated emails to users when their accounts are approved.
+ * Uses EmailJS - a free email service that doesn't require a backend.
+ * 
+ * Setup: https://www.emailjs.com
+ */
+
+import emailjs from '@emailjs/browser';
+
+// ============================================
+// ?? YOUR EMAILJS CREDENTIALS
+// ============================================
+const EMAILJS_SERVICE_ID = 'service_s3kl4pg';
+const EMAILJS_TEMPLATE_ID = 'template_lievm0n';
+const EMAILJS_PUBLIC_KEY = 'LT7Fsfg_39olLwVSz';
+
+// ============================================
+// ?? EMAIL SENDING FUNCTION
+// ============================================
+
+/**
+ * Sends an approval email to a user
+ * 
+ * @param userEmail - The user's email address (where to send)
+ * @param userName - The user's full name
+ * @param userRole - The role assigned (user, admin, etc.)
+ * @returns Promise<boolean> - true if email sent successfully
+ */
+export async function sendApprovalEmail(
+  userEmail: string,
+  userName: string,
+  userRole: string
+): Promise<boolean> {
+  
+  try {
+    console.log('?? Sending approval email to:', userEmail);
+    
+    // Send email via EmailJS
+    // IMPORTANT: Only send the 3 core parameters
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      {
+        to_name: userName,           // For email greeting
+        to_email: userEmail,         // Recipient email address
+        user_role: userRole,         // Their role (user/admin)
+      },
+      EMAILJS_PUBLIC_KEY
+    );
+    
+    console.log('? Email sent successfully:', response.status, response.text);
+    return true;
+    
+  } catch (error: any) {
+    console.error('? Failed to send email:', error);
+    
+    // Log specific error details for debugging
+    if (error.text) {
+      console.error('Error details:', error.text);
+    }
+    if (error.status) {
+      console.error('Error status:', error.status);
+    }
+    
+    // Don't throw error - email failure shouldn't block approval
+    return false;
+  }
+}
+
+========================================
+
+FILE: src\lib\utils.ts
+
+========================================
+
+
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+========================================
+
+FILE: src\context\auth-provider.tsx
+
+========================================
+
+
+"use client";
+
+import {
+  createContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection, query, where, limit } from "firebase/firestore";
+import { auth, db, userConverter } from "@/lib/firestore";
+import type { AppUser, Role } from "@/types";
+
+interface AuthContextType {
+  user: AppUser | null;
+  loading: boolean;
+  role: Role | null;
+  handleSignUp: (data: any) => Promise<string | null>;
+  handleSignIn: (email: string, pass: string) => Promise<string | null>;
+  handleSignOut: () => void;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+      if (firebaseUser) {
+        const userDocRef = doc(db, "users", firebaseUser.uid).withConverter(userConverter);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          
+          if (userData.role === 'pending' || userData.role === 'rejected') {
+             await signOut(auth);
+             setUser(null);
+             setRole(null);
+             router.replace("/login?pending=1");
+          } else {
+            setUser(userData);
+            setRole(userData.role);
+            const currentPath = window.location.pathname;
+            if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/') {
+                router.replace("/admin/dashboard");
+            }
+          }
+        } else {
+            // No user profile found, sign them out.
+            await signOut(auth);
+            setUser(null);
+            setRole(null);
+        }
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleSignUp = async (data: any) => {
+    setLoading(true);
+    try {
+      const { email, password, fullName, phone, company, companyId, workLocation } = data;
+      
+      const metaRef = doc(db, "app", "config");
+      const metaSnap = await getDoc(metaRef);
+      const isFirstUser = !metaSnap.exists() || metaSnap.data().ownerSet !== true;
+      const newUserRole = isFirstUser ? 'owner' : 'pending';
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+
+      const userProfile: Omit<AppUser, 'uid'> = {
+        email,
+        fullName,
+        phone: phone || "",
+        company: company || "",
+        companyId: companyId || "",
+        workLocation: workLocation || "",
+        role: newUserRole,
+        createdAt: serverTimestamp(),
+        approvedBy: null,
+        approvedAt: null,
+      };
+
+      await setDoc(doc(db, "users", uid), userProfile);
+      
+      if (isFirstUser) {
+        await setDoc(metaRef, { ownerSet: true }, { merge: true });
+        // Manually set user state for the owner to bypass onAuthStateChanged race condition
+        setUser({ uid, ...userProfile } as AppUser);
+        setRole(newUserRole);
+      }
+      
+      if (newUserRole === 'pending') {
+          await signOut(auth);
+          router.push("/login?pending=1");
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      if (error.code === 'auth/email-already-in-use') {
+        return 'An account with this email already exists. Please try logging in or use the reset script if this is a development environment.';
+      }
+      return error.message || "An unknown error occurred.";
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignIn = async (email: string, pass: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      return null;
+    } catch (error: any) {
+      console.error("Signin error:", error);
+      return error.message || "An unknown error occurred.";
+    } 
+  };
+
+  const handleSignOut = async () => {
+    setLoading(true);
+    await signOut(auth);
+    setUser(null);
+    setRole(null);
+    router.push("/login");
+    setLoading(false);
+  };
+
+  const value = { user, loading, role, handleSignUp, handleSignIn, handleSignOut };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+========================================
+
+FILE: src\context\data-provider.tsx
+
+========================================
+
+
+"use client";
+
+import {
+  createContext,
+  useState,
+  useEffect,
+  type ReactNode,
+  useContext,
+} from "react";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db, passConverter, userConverter } from "@/lib/firestore";
+import type { AppUser, Pass } from "@/types";
+import { useAuth } from "@/hooks/use-auth";
+
+interface DataContextType {
+  passes: Pass[];
+  users: AppUser[];
+  loading: boolean;
+  refreshData: () => void;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const [passes, setPasses] = useState<Pass[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setPasses([]);
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    // Real-time listener for passes
+    const passesQuery = query(
+      collection(db, "passes"),
+      orderBy("createdAt", "desc")
+    ).withConverter(passConverter);
+
+    const unsubscribePasses = onSnapshot(
+      passesQuery,
+      (snapshot) => {
+        const passesData = snapshot.docs.map((doc) => doc.data());
+        setPasses(passesData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching passes:", error);
+        setLoading(false);
+      }
+    );
+
+    // Real-time listener for users
+    const usersQuery = query(
+      collection(db, "users"),
+      orderBy("createdAt", "desc")
+    ).withConverter(userConverter);
+
+    const unsubscribeUsers = onSnapshot(
+      usersQuery,
+      (snapshot) => {
+        const usersData = snapshot.docs.map((doc) => doc.data());
+        setUsers(usersData);
+      },
+      (error) => {
+        console.error("Error fetching users:", error);
+      }
+    );
+
+    // Cleanup listeners on unmount
+    return () => {
+      unsubscribePasses();
+      unsubscribeUsers();
+    };
+  }, [user]);
+
+  const refreshData = () => {
+    console.log("Data is real-time, no manual refresh needed");
+  };
+
+  const value = { passes, users, loading, refreshData };
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+}
+
+export const useData = () => {
+  const context = useContext(DataContext);
+  if (context === undefined) {
+    throw new Error("useData must be used within a DataProvider");
+  }
+  return context;
+};
+
+========================================
+
+FILE: src\hooks\use-auth.ts
+
+========================================
+
+
+"use client";
+
+import { useContext } from "react";
+import { AuthContext } from "@/context/auth-provider";
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+
+========================================
+
+FILE: src\components\auth\auth-gate.tsx
+
+========================================
+
+
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+
+export default function AuthGate({ children }: { children: ReactNode }) {
+  const { user, loading, role } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (role === "pending" || role === "rejected") {
+        router.replace("/login?pending=1");
+      }
+    }
+  }, [user, loading, role, router]);
+
+  if (loading || !user || !role || role === 'pending' || role === 'rejected') {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+========================================
+
+FILE: src\components\auth\role-gate.tsx
+
+========================================
+
+
+"use client";
+
+import type { ReactNode } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import type { Role } from "@/types";
+
+interface RoleGateProps {
+  children: ReactNode;
+  allowedRoles: Role[];
+}
+
+export default function RoleGate({ children, allowedRoles }: RoleGateProps) {
+  const { role } = useAuth();
+
+  if (!role || !allowedRoles.includes(role)) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+========================================
+
+FILE: src\components\forms\signup-form.tsx
+
+========================================
+
+
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+
+const formSchema = z.object({
+  fullName: z.string().min(2, "Full name must be at least 2 characters."),
+  email: z.string().email("Invalid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  phone: z.string().min(1, "Phone number is required."),
+  company: z.string().min(2, "Company is required."),
+  companyId: z.string().min(1, "Company ID is required."),
+  workLocation: z.string().min(1, "Work location is required."),
+});
+
+const locations = ["SEC 01", "SEC 02", "SEC 03", "SEC 04", "SEC 05", "SEC 06", "SEC 07", "SEC 08", "SEC 09", "SEC 10", "LD 01", "LD 02", "LD 03", "LD 04", "LD 05", "LD 06", "Pump Station"];
+
+export function SignupForm() {
+  const { handleSignUp, loading } = useAuth();
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      phone: "",
+      company: "",
+      companyId: "",
+      workLocation: "",
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const error = await handleSignUp(values);
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description: error,
+      });
+    } else {
+        toast({
+            title: "Account Created",
+            description: "Your account is now pending approval from an administrator.",
+        });
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-headline text-2xl">Create Account</CardTitle>
+        <CardDescription>Enter your details to create a new account.</CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+             <FormField
+              control={form.control}
+              name="fullName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="john@acme.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="+966..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+                 <FormField
+                  control={form.control}
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Petrojet" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="companyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="PJ-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
+             <FormField
+              control={form.control}
+              name="workLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Work Location</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                             {locations.map(loc => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign Up
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Button variant="link" asChild className="p-0 h-auto">
+                    <Link href="/login">Sign In</Link>
+                </Button>
+            </p>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+}
+
+========================================
+
+FILE: src\components\forms\login-form.tsx
+
+========================================
+
+
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+
+const formSchema = z.object({
+  email: z.string().email("Invalid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+});
+
+export function LoginForm() {
+  const { handleSignIn } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
+    const error = await handleSignIn(values.email, values.password);
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error,
+      });
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-headline text-2xl">Admin Sign In</CardTitle>
+        <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="john@acme.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign In
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+                Don't have an account?{" "}
+                <Button variant="link" asChild className="p-0 h-auto">
+                    <Link href="/signup">Sign Up</Link>
+                </Button>
+            </p>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+}
+
+========================================
+
+FILE: src\components\forms\generate-standard-form.tsx
+
+========================================
+
+
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { addDoc, collection, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db, passConverter } from "@/lib/firestore";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { buildQrPayload } from "@/lib/qr";
+import { useState } from "react";
+import PassPreviewDialog from "./pass-preview-dialog";
+import type { StandardPass, Pass } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+
+const formSchema = z.object({
+  plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+  plateNum: z.string().min(1, "Required").max(5, "Max 5 digits").regex(/^\d+$/, "Only numbers"),
+  ownerName: z.string().min(2, "Required"),
+  serial: z.string().min(1, "Required"),
+  ownerCompany: z.string().min(1, "Required"),
+  location: z.string().min(1, "Required"),
+  expiresAt: z.date({ required_error: "Expiry date is required." }),
+});
+
+const locations = ["SEC 01", "SEC 02", "SEC 03", "SEC 04", "SEC 05", "SEC 06", "SEC 07", "SEC 08", "SEC 09", "SEC 10", "LD 01", "LD 02", "LD 03", "LD 04", "LD 05", "LD 06", "Pump Station"];
+
+export default function GenerateStandardForm() {
+  const { user, loading: userLoading } = useAuth();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedPass, setGeneratedPass] = useState<Pass | null>(null);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      plateAlpha: "",
+      plateNum: "",
+      ownerName: "",
+      serial: "",
+      ownerCompany: "",
+      location: "",
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to create a pass." });
+      return;
+    }
+    setIsSubmitting(true);
+
+    try {
+      const passCollection = collection(db, "passes").withConverter(passConverter);
+      const newPassData: Omit<StandardPass, 'id' | 'qrPayload'> = {
+        type: "standard",
+        plateAlpha: values.plateAlpha.toUpperCase(),
+        plateNum: values.plateNum,
+        ownerName: values.ownerName,
+        serial: values.serial,
+        ownerCompany: values.ownerCompany,
+        location: values.location,
+        expiresAt: values.expiresAt,
+        status: "active",
+        createdAt: serverTimestamp(),
+        createdBy: user.uid,
+        createdByName: user.fullName,
+        createdByCompany: user.company,
+      };
+
+      // Step 1: Create document in Firestore
+      const docRef = await addDoc(passCollection, newPassData as any);
+
+      // Step 2: Build qrPayload with the generated document ID
+      const qrPayload = buildQrPayload(docRef.id, values.plateAlpha, values.plateNum, values.expiresAt);
+
+      // Step 3: Update Firestore document with qrPayload
+      await updateDoc(docRef, { qrPayload });
+
+      // Step 4: Prepare data for preview dialog
+      const finalPassData = {
+        ...newPassData,
+        id: docRef.id,
+        qrPayload: qrPayload,
+        createdAt: new Date(),
+        expiresAt: values.expiresAt,
+      };
+
+      setGeneratedPass(finalPassData as Pass);
+      toast({ title: "Success", description: "Standard pass created successfully." });
+      form.reset();
+
+    } catch (error) {
+      console.error("Error creating pass:", error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to create pass. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+              control={form.control}
+              name="plateAlpha"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plate Alpha</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ABC" {...field} style={{textTransform: 'uppercase'}}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+              <FormField
+              control={form.control}
+              name="plateNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plate Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="1234" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+            <FormField
+              control={form.control}
+              name="ownerName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Owner's Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          <FormField
+            control={form.control}
+            name="serial"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Serial</FormLabel>
+                <FormControl>
+                  <Input placeholder="SN-12345" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="ownerCompany"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Owner's Company</FormLabel>
+                <FormControl>
+                  <Input placeholder="Acme Inc." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Location</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {locations.map(loc => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="expiresAt"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Valid Until</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={isSubmitting || userLoading} className="w-full">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Pass
+          </Button>
+        </form>
+      </Form>
+      {generatedPass && (
+        <PassPreviewDialog 
+          pass={generatedPass} 
+          open={!!generatedPass} 
+          onOpenChange={() => setGeneratedPass(null)}
+        />
+      )}
+    </>
+  );
+}
+
+========================================
+
+FILE: src\components\forms\generate-visitor-form.tsx
+
+========================================
+
+
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { addDoc, collection, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db, passConverter } from "@/lib/firestore";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format, endOfDay } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { buildQrPayload } from "@/lib/qr";
+import { useState } from "react";
+import PassPreviewDialog from "./pass-preview-dialog";
+import type { VisitorPass, Pass } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+
+const formSchema = z.object({
+  plateAlpha: z.string().min(1, "Required").max(4, "Max 4 chars").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+  plateNum: z.string().min(1, "Required").max(5, "Max 5 digits").regex(/^\d+$/, "Only numbers"),
+  visitorName: z.string().min(2, "Required"),
+  personToVisit: z.string().min(1, "Required"),
+  purpose: z.string().min(1, "Required"),
+  location: z.string().min(1, "Required"),
+});
+
+const locations = ["SEC 01", "SEC 02", "SEC 03", "SEC 04", "SEC 05", "SEC 06", "SEC 07", "SEC 08", "SEC 09", "SEC 10", "LD 01", "LD 02", "LD 03", "LD 04", "LD 05", "LD 06", "Pump Station"];
+
+
+export default function GenerateVisitorForm() {
+  const { user, loading: userLoading } = useAuth();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedPass, setGeneratedPass] = useState<Pass | null>(null);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      plateAlpha: "",
+      plateNum: "",
+      visitorName: "",
+      personToVisit: "",
+      purpose: "",
+      location: "",
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to create a pass." });
+      return;
+    }
+    setIsSubmitting(true);
+    
+    const expiresAt = endOfDay(new Date());
+
+    try {
+      const passCollection = collection(db, "passes").withConverter(passConverter);
+      const newPassData: Omit<VisitorPass, 'id' | 'qrPayload'> = {
+        type: "visitor",
+        plateAlpha: values.plateAlpha.toUpperCase(),
+        plateNum: values.plateNum,
+        visitorName: values.visitorName,
+        personToVisit: values.personToVisit,
+        purpose: values.purpose,
+        location: values.location,
+        expiresAt: expiresAt,
+        status: "active",
+        createdAt: serverTimestamp(),
+        createdBy: user.uid,
+        createdByName: user.fullName,
+        createdByCompany: user.company,
+      };
+
+      // Step 1: Create document in Firestore
+      const docRef = await addDoc(passCollection, newPassData as any);
+
+      // Step 2: Build qrPayload with the generated document ID
+      const qrPayload = buildQrPayload(docRef.id, values.plateAlpha, values.plateNum, expiresAt);
+
+      // Step 3: Update Firestore document with qrPayload
+      await updateDoc(docRef, { qrPayload });
+
+      // Step 4: Prepare data for preview dialog
+      const finalPassData = {
+        ...newPassData,
+        id: docRef.id,
+        qrPayload: qrPayload,
+        createdAt: new Date(),
+        expiresAt: expiresAt,
+      };
+
+      setGeneratedPass(finalPassData as Pass);
+      toast({ title: "Success", description: "Visitor pass created successfully." });
+      form.reset();
+
+    } catch (error) {
+      console.error("Error creating pass:", error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to create pass. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+              control={form.control}
+              name="plateAlpha"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plate Alpha</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ABC" {...field} style={{textTransform: 'uppercase'}}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+              <FormField
+              control={form.control}
+              name="plateNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plate Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="1234" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+            <FormField
+              control={form.control}
+              name="visitorName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Visitor's Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ali" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          <FormField
+            control={form.control}
+            name="personToVisit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Person to Visit</FormLabel>
+                <FormControl>
+                  <Input placeholder="Facility Manager" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="purpose"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purpose</FormLabel>
+                <FormControl>
+                  <Input placeholder="Maintenance" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Location</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                             {locations.map(loc => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )}
+          />
+
+          <Button type="submit" disabled={isSubmitting || userLoading} className="w-full">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Pass
+          </Button>
+        </form>
+      </Form>
+      {generatedPass && (
+        <PassPreviewDialog 
+          pass={generatedPass} 
+          open={!!generatedPass} 
+          onOpenChange={() => setGeneratedPass(null)}
+        />
+      )}
+    </>
+  );
+}
+
+========================================
+
+FILE: src\app\layout.tsx
+
+========================================
+
+
+import type { Metadata } from 'next';
+import { AuthProvider } from '@/context/auth-provider';
+import { Toaster } from '@/components/ui/toaster';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'GuardianGate',
+  description: 'Secure Access Management by Gate Pass Guardian',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-body antialiased">
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+
+========================================
+
+FILE: src\app\page.tsx
+
+========================================
+
+
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+
+export default function HomePage() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.replace("/verifier");
+  }, [router]);
+  
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+========================================
+
+FILE: src\app\login\page.tsx
+
+========================================
+
+
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { LoginForm } from "@/components/forms/login-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Clock, Mail } from "lucide-react";
+import { Suspense } from "react";
+
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const isPending = searchParams.get("pending") === "1";
+
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
+        {isPending && (
+          <Alert className="border-yellow-500 bg-yellow-50">
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Account Pending Approval</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              Your account has been created successfully and is awaiting administrator approval. 
+              You will receive an email notification once your account is activated.
+            </AlertDescription>
+          </Alert>
+        )}
+        <LoginForm />
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="container flex h-screen w-screen flex-col items-center justify-center">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+========================================
+
+FILE: src\app\signup\page.tsx
+
+========================================
+
+
+import { SignupForm } from '@/components/forms/signup-form';
+
+export default function SignupPage() {
+    return <SignupForm />;
+}
+
+========================================
+
+FILE: src\app\verifier\page.tsx
+
+========================================
+
+
+"use client";
+
+import { ShieldCheck, QrCode } from 'lucide-react';
+import ManualSearch from '@/components/verifier/manual-search';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import QrScanner from '@/components/verifier/qr-scanner';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import PassDetails from '@/components/verifier/pass-details';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firestore';
+
+export default function VerifierPage() {
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannedPass, setScannedPass] = useState<any>(null);
+  const [isValidating, setIsValidating] = useState(false);
+
+  const handleScanSuccess = async (decodedText: string) => {
+    // Prevent duplicate scans
+    if (isValidating || scannedPass) return;
+    
+    console.log("Processing scanned QR:", decodedText);
+    setIsValidating(true);
+    setIsScannerOpen(false); // Close scanner immediately
+
+    try {
+      // Parse QR data
+      const qrData = JSON.parse(decodedText);
+      console.log("Parsed QR data:", qrData);
+
+      // Validate QR structure
+      if (!qrData.pid || !qrData.v) {
+        throw new Error("Invalid QR code format");
+      }
+
+      // Fetch pass from Firestore using the pass ID
+      const passRef = doc(db, 'passes', qrData.pid);
+      const passSnap = await getDoc(passRef);
+
+      if (!passSnap.exists()) {
+        throw new Error("Pass not found");
+      }
+
+      const passData = passSnap.data();
+      console.log("Pass data from Firestore:", passData);
+
+      // Check expiry
+      const now = Date.now() / 1000;
+      if (qrData.exp && qrData.exp < now) {
+        passData.expired = true;
+      }
+
+      // Show result
+      setScannedPass({ id: passSnap.id, ...passData });
+    } catch (error: any) {
+      console.error("Validation error:", error);
+      alert(`Scan failed: ${error.message}`);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  return (
+    <div className="bg-secondary/30 min-h-screen">
+      <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-7 w-7 text-primary" />
+            <span className="font-headline text-xl font-bold">GuardianGate Verifier</span>
+          </div>
+          <Button asChild>
+            <Link href="/login">Sign In</Link>
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto p-4 md:p-8">
+        <div className="mx-auto max-w-2xl space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold font-headline tracking-tight">Pass Verifier</h1>
+            <p className="text-muted-foreground mt-2">
+              Enter a vehicle's plate number or scan a QR code to verify its access status.
+            </p>
+          </div>
+
+          {/* Show scan result in dialog */}
+          <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Verification Result</DialogTitle>
+                <DialogDescription>Pass validation complete</DialogDescription>
+              </DialogHeader>
+              {scannedPass && <PassDetails pass={scannedPass} />}
+            </DialogContent>
+          </Dialog>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Manual Plate Search</CardTitle>
+              <CardDescription>Enter the plate letters and numbers separately.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ManualSearch />
+            </CardContent>
+          </Card>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-secondary/30 px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="w-full">
+                <QrCode className="mr-2 h-5 w-5" />
+                Scan QR Code
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5" /> Scan QR Code
+                </DialogTitle>
+                <DialogDescription>
+                  Use your device's camera to scan the pass QR code.
+                </DialogDescription>
+              </DialogHeader>
+              {isValidating ? (
+                <div className="text-center py-8">Validating pass...</div>
+              ) : (
+                <QrScanner 
+                  onScanSuccess={handleScanSuccess}
+                  onScanError={(error) => console.error("Scanner error:", error)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+========================================
+
+FILE: src\app\admin\dashboard\page.tsx
+
+========================================
+
+
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export default function DashboardPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/admin/dashboard/generate");
+  }, [router]);
+
+  return (
+    <div className="flex h-full items-center justify-center">
+      <p>Loading dashboard...</p>
+    </div>
+  );
+}
+
+========================================
+
+FILE: src\app\admin\dashboard\users\page.tsx
+
+========================================
+
+
+import { UsersTable } from '@/components/tables/users-table';
+import { Suspense } from 'react';
+
+export default function UsersPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-headline text-3xl font-bold">Manage Users</h1>
+        <p className="text-muted-foreground">
+          Approve new users and manage existing user roles.
+        </p>
+      </div>
+      <Suspense fallback={<div className="h-96 w-full animate-pulse rounded-lg bg-muted" />}>
+        <UsersTable />
+      </Suspense>
+    </div>
+  );
+}
+
+========================================
+
+FILE: src\app\admin\dashboard\generate\page.tsx
+
+========================================
+
+
+"use client";
+
+import { useState } from "react";
+import GenerateStandardForm from "@/components/forms/generate-standard-form";
+import GenerateVisitorForm from "@/components/forms/generate-visitor-form";
+import GenerateBatchForm from "@/components/forms/generate-batch-form";
+import { Car, User, FileUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const passTypes = [
+    { id: 'standard', label: 'Standard', icon: Car },
+    { id: 'visitor', label: 'Visitor', icon: User },
+    { id: 'batch', label: 'Batch Upload', icon: FileUp },
+]
+
+export default function GeneratePassPage() {
+  const [passType, setPassType] = useState("standard");
+
+  const renderForm = () => {
+    switch (passType) {
+      case "standard":
+        return <GenerateStandardForm />;
+      case "visitor":
+        return <GenerateVisitorForm />;
+      case "batch":
+        return <GenerateBatchForm />;
+      default:
+        return <GenerateStandardForm />;
+    }
+  };
+
+  return (
+    <div className="space-y-6 mx-auto max-w-2xl">
+      <div className="text-center md:text-left">
+        <h1 className="font-headline text-3xl font-bold">Create New Gate Pass</h1>
+        <p className="text-muted-foreground">
+          Fill in the details to generate a new pass.
+        </p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
+            <div className="space-y-2 mb-6">
+                 <label className="text-sm font-medium">Pass Type</label>
+                <Select value={passType} onValueChange={setPassType}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select pass type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {passTypes.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                                <div className="flex items-center gap-2">
+                                    <item.icon className="h-4 w-4" />
+                                    <span>{item.label}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            {renderForm()}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
