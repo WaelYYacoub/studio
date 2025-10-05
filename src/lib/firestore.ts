@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
+﻿import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, serverTimestamp, Timestamp, type DocumentData, type FirestoreDataConverter, type QueryDocumentSnapshot, type SnapshotOptions } from "firebase/firestore";
 import type { AppUser, Pass, Role } from "@/types";
@@ -47,15 +47,26 @@ export const passConverter: FirestoreDataConverter<Pass> = {
     },
     fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): Pass => {
         const data = snapshot.data(options);
+        
+        // Helper function to safely convert timestamps
+        const toTimestamp = (value: any): Timestamp => {
+          if (!value) return Timestamp.now(); // Default to now if null/undefined
+          if (value instanceof Timestamp) return value;
+          if (value.seconds !== undefined && value.nanoseconds !== undefined) {
+            return new Timestamp(value.seconds, value.nanoseconds);
+          }
+          return Timestamp.now(); // Fallback
+        };
+        
         const baseData = {
             id: snapshot.id,
             type: data.type,
             plateAlpha: data.plateAlpha,
             plateNum: data.plateNum,
             location: data.location,
-            expiresAt: data.expiresAt instanceof Timestamp ? data.expiresAt : new Timestamp(data.expiresAt.seconds, data.expiresAt.nanoseconds),
+            expiresAt: toTimestamp(data.expiresAt),
             status: data.status,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt : new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds),
+            createdAt: toTimestamp(data.createdAt),
             createdBy: data.createdBy,
             createdByName: data.createdByName,
             createdByCompany: data.createdByCompany,
