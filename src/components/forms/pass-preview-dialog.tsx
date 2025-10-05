@@ -61,8 +61,6 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
           background: "white",
           fontFamily: "sans-serif",
         },
-        canvasWidth: cardRef.current.offsetWidth + 40,
-        canvasHeight: cardRef.current.offsetHeight + 40,
         filter: (node) => {
           if (node.tagName === "STYLE" || node.tagName === "LINK") {
             return false;
@@ -167,7 +165,7 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
                     <span className="details-value" style={{textTransform: 'none'}}>{format(getPassDate(pass.expiresAt), "PPP, p")}</span>
                 </div>
 
-                <div ref={cardRef} className="mt-6 flex justify-center">
+                <div ref={cardRef} className="mt-6 flex justify-center p-2">
                     <QrCodeDisplay payload={pass.qrPayload} />
                 </div>
             </div>
