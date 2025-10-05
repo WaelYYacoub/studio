@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <AuthGate>
-      <RoleGate allowedRoles={["owner", "admin", "user"]}>
+      <RoleGate allowedRoles={["owner", "admin"]}>
         <div className="flex h-screen">
           {/* Sidebar */}
           <aside className="w-64 border-r bg-card">
