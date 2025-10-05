@@ -33,7 +33,7 @@ export function RecordsTableActions({ pass, actualStatus }: RecordsTableActionsP
       await updateDoc(passRef, { status: "revoked" });
       toast({
         title: "Pass Revoked",
-        description: Pass for plate - has been revoked.,
+        description: `Pass for plate ${pass.plateAlpha}-${pass.plateNum} has been revoked.`,
       });
     } catch (error) {
       toast({
@@ -49,7 +49,7 @@ export function RecordsTableActions({ pass, actualStatus }: RecordsTableActionsP
       await deleteDoc(doc(db, "passes", pass.id));
       toast({
         title: "Pass Deleted",
-        description: Pass for plate - has been permanently deleted.,
+        description: `Pass for plate ${pass.plateAlpha}-${pass.plateNum} has been permanently deleted.`,
       });
     } catch (error) {
        toast({

@@ -91,7 +91,7 @@ export default function GenerateStandardForm() {
         toast({
           variant: "destructive",
           title: "Duplicate Pass",
-          description: An active pass already exists for plate -. Please wait until it expires or revoke it first.,
+          description: `An active pass already exists for plate ${plateAlphaUpper}-${values.plateNum}. Please wait until it expires or revoke it first.`,
         });
         setIsSubmitting(false);
         return;
@@ -135,7 +135,7 @@ export default function GenerateStandardForm() {
       form.reset();
       toast({
         title: "Pass Created",
-        description: Pass for - has been successfully created.,
+        description: `Pass for ${plateAlphaUpper}-${values.plateNum} has been successfully created.`,
       });
     } catch (error) {
       console.error("Error creating pass:", error);
