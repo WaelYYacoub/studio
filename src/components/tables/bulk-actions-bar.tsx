@@ -98,7 +98,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const now = new Date();
     const exportDate = format(now, "PPpp");
     
@@ -117,42 +117,94 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       visitor: selectedPasses.filter(p => p.type === "visitor").length,
     };
 
-    // Create workbook
-    const wb = XLSX.utils.book_new();
+    // Import xlsx-style for styling support
+    const XLSX_STYLE = await import("xlsx-js-style");
 
-    // SHEET 1: SUMMARY
+    // Create workbook
+    const wb = XLSX_STYLE.utils.book_new();
+
+    // SHEET 1: SUMMARY with formatting
     const summaryData = [
-      ["GUARDIAN GATE - PASS RECORDS REPORT"],
-      [],
+      ["GUARDIAN GATE - PASS RECORDS REPORT", ""],
+      ["", ""],
       ["Report Generated:", exportDate],
       ["Total Records:", selectedCount],
-      [],
-      ["SUMMARY STATISTICS"],
-      [],
-      ["Status Breakdown"],
-      ["Active Passes:", statusCounts.active],
-      ["Expired Passes:", statusCounts.expired],
-      ["Revoked Passes:", statusCounts.revoked],
-      [],
-      ["Type Breakdown"],
-      ["Standard Passes:", typeCounts.standard],
-      ["Visitor Passes:", typeCounts.visitor],
+      ["", ""],
+      ["SUMMARY STATISTICS", ""],
+      ["", ""],
+      ["Status Breakdown", "Count"],
+      ["Active Passes", statusCounts.active],
+      ["Expired Passes", statusCounts.expired],
+      ["Revoked Passes", statusCounts.revoked],
+      ["", ""],
+      ["Type Breakdown", "Count"],
+      ["Standard Passes", typeCounts.standard],
+      ["Visitor Passes", typeCounts.visitor],
     ];
 
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    const wsSummary = XLSX_STYLE.utils.aoa_to_sheet(summaryData);
 
-    // Set column widths for summary
-    wsSummary['!cols'] = [
-      { wch: 25 },
-      { wch: 20 }
-    ];
+    // Style summary sheet
+    const titleStyle = {
+      font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4472C4" } },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
 
-    // Merge cells for title
-    wsSummary['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }
-    ];
+    const headerStyle = {
+      font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4472C4" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
 
-    // SHEET 2: DETAILED RECORDS
+    const labelStyle = {
+      font: { bold: true, sz: 11 },
+      fill: { fgColor: { rgb: "D9E1F2" } },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    const dataStyle = {
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    // Apply title style
+    wsSummary['A1'].s = titleStyle;
+    wsSummary['B1'].s = titleStyle;
+
+    // Apply styles to summary headers and data
+    ['A6', 'B6'].forEach(cell => { if (wsSummary[cell]) wsSummary[cell].s = titleStyle; });
+    ['A8', 'B8'].forEach(cell => { if (wsSummary[cell]) wsSummary[cell].s = headerStyle; });
+    ['A13', 'B13'].forEach(cell => { if (wsSummary[cell]) wsSummary[cell].s = headerStyle; });
+    
+    // Apply styles to data rows
+    [9, 10, 11, 14, 15].forEach(row => {
+      ['A', 'B'].forEach(col => {
+        const cell = `${col}${row}`;
+        if (wsSummary[cell]) wsSummary[cell].s = col === 'A' ? labelStyle : dataStyle;
+      });
+    });
+
+    // Set column widths
+    wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];
+    wsSummary['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+
+    // SHEET 2: DETAILED RECORDS with formatting
     const headers = [
       "No.",
       "Plate Number",
@@ -183,37 +235,85 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       pass.id,
     ]);
 
-    const wsData = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wsData = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
 
-    // Set column widths for detailed records
+    // Style header row
+    const range = XLSX_STYLE.utils.decode_range(wsData['!ref'] || 'A1');
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const address = XLSX_STYLE.utils.encode_col(C) + "1";
+      if (!wsData[address]) continue;
+      wsData[address].s = {
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "4472C4" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+    }
+
+    // Style data rows with alternating colors and status color coding
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      const isEvenRow = R % 2 === 0;
+      const rowBgColor = isEvenRow ? "FFFFFF" : "F2F2F2";
+      
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const address = XLSX_STYLE.utils.encode_col(C) + (R + 1).toString();
+        if (!wsData[address]) continue;
+
+        let cellStyle: any = {
+          fill: { fgColor: { rgb: rowBgColor } },
+          border: {
+            top: { style: "thin", color: { rgb: "D3D3D3" } },
+            bottom: { style: "thin", color: { rgb: "D3D3D3" } },
+            left: { style: "thin", color: { rgb: "D3D3D3" } },
+            right: { style: "thin", color: { rgb: "D3D3D3" } }
+          },
+          alignment: { vertical: "center" }
+        };
+
+        // Status column (index 5) - color code based on status
+        if (C === 5) {
+          const status = wsData[address].v;
+          if (status === "ACTIVE") {
+            cellStyle.fill = { fgColor: { rgb: "C6EFCE" } };
+            cellStyle.font = { color: { rgb: "006100" }, bold: true };
+          } else if (status === "EXPIRED") {
+            cellStyle.fill = { fgColor: { rgb: "FFC7CE" } };
+            cellStyle.font = { color: { rgb: "9C0006" }, bold: true };
+          } else if (status === "REVOKED") {
+            cellStyle.fill = { fgColor: { rgb: "FFC7CE" } };
+            cellStyle.font = { color: { rgb: "9C0006" }, bold: true };
+          }
+        }
+
+        wsData[address].s = cellStyle;
+      }
+    }
+
+    // Set column widths
     wsData['!cols'] = [
-      { wch: 6 },  // No.
-      { wch: 15 }, // Plate
-      { wch: 12 }, // Type
-      { wch: 20 }, // Owner
-      { wch: 25 }, // Company
-      { wch: 10 }, // Status
-      { wch: 12 }, // Location
-      { wch: 15 }, // Serial
-      { wch: 15 }, // Issue
-      { wch: 15 }, // Expiry
-      { wch: 20 }, // Created By
-      { wch: 25 }, // Pass ID
+      { wch: 6 },  { wch: 15 }, { wch: 12 }, { wch: 20 },
+      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 15 },
+      { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }
     ];
 
-    // Enable auto-filter on detailed records
-    wsData['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: headers.length - 1 } }) };
+    // Enable auto-filter
+    wsData['!autofilter'] = { ref: `A1:L${rows.length + 1}` };
 
     // Add sheets to workbook
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-    XLSX.utils.book_append_sheet(wb, wsData, "Detailed Records");
+    XLSX_STYLE.utils.book_append_sheet(wb, wsSummary, "Summary");
+    XLSX_STYLE.utils.book_append_sheet(wb, wsData, "Detailed Records");
 
-    // Generate file and trigger download
-    XLSX.writeFile(wb, `Guardian-Gate-Report-${format(now, "yyyy-MM-dd-HHmm")}.xlsx`);
+    // Generate file
+    XLSX_STYLE.writeFile(wb, `Guardian-Gate-Report-${format(now, "yyyy-MM-dd-HHmm")}.xlsx`);
 
     toast({
       title: "Excel Report Generated",
-      description: `Exported ${selectedCount} pass record(s) to Excel.`,
+      description: `Exported ${selectedCount} pass record(s) with formatting.`,
     });
   };
 
@@ -224,26 +324,21 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
     });
 
     try {
-      // Dynamic import to reduce bundle size
       const { jsPDF } = await import("jspdf");
       const QRCode = (await import("qrcode")).default;
 
       const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
       const qrSize = 60;
       const margin = 20;
       const cols = 2;
       const rows = 3;
       const spacing = 10;
 
-      let currentPage = 0;
       let position = 0;
 
       for (const pass of selectedPasses) {
         if (position % (cols * rows) === 0 && position !== 0) {
           pdf.addPage();
-          currentPage++;
         }
 
         const col = (position % cols);
@@ -252,20 +347,14 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
         const x = margin + col * (qrSize + spacing);
         const y = margin + row * (qrSize + spacing + 15);
 
-        // Generate QR code as data URL
         const qrDataUrl = await QRCode.toDataURL(pass.qrPayload, {
           width: 256,
           margin: 1,
         });
 
-        // Add QR code
         pdf.addImage(qrDataUrl, "PNG", x, y, qrSize, qrSize);
-
-        // Add plate number below QR
         pdf.setFontSize(10);
         pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + qrSize / 2, y + qrSize + 5, { align: "center" });
-        
-        // Add expiry date
         pdf.setFontSize(8);
         pdf.text(`Expires: ${format(pass.expiresAt.toDate(), "PP")}`, x + qrSize / 2, y + qrSize + 10, { align: "center" });
 
@@ -353,7 +442,6 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
             <AlertDialogTitle>Revoke Selected Passes?</AlertDialogTitle>
             <AlertDialogDescription>
               This will revoke {activePassCount} active pass(es). Expired and already-revoked passes will be skipped.
-              This action can be undone by updating each pass individually.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
