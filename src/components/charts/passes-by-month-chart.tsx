@@ -14,6 +14,7 @@ export function PassesByMonthChart() {
   const { passes, loading } = useData();
 
   const chartData = useMemo(() => {
+    const now = new Date();
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
       month: format(new Date(0, i), "MMM"),
       active: 0,
@@ -24,9 +25,20 @@ export function PassesByMonthChart() {
       const createdAtDate = pass.createdAt.toDate();
       if (isThisYear(createdAtDate)) {
         const monthIndex = getMonth(createdAtDate);
-        if (pass.status === "active") {
+        
+        // Calculate actual status
+        let actualStatus: string;
+        if (pass.status === "revoked") {
+          actualStatus = "expired"; // Count revoked as expired for this chart
+        } else if (pass.expiresAt.toDate() < now) {
+          actualStatus = "expired";
+        } else {
+          actualStatus = "active";
+        }
+        
+        if (actualStatus === "active") {
           monthlyData[monthIndex].active += 1;
-        } else if (pass.status === "expired" || pass.status === "revoked") {
+        } else {
           monthlyData[monthIndex].expired += 1;
         }
       }
@@ -34,7 +46,7 @@ export function PassesByMonthChart() {
 
     return monthlyData;
   }, [passes]);
-  
+
   if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }

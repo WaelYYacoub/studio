@@ -1,5 +1,4 @@
 "use client";
-
 import { Pie, PieChart, Tooltip } from "recharts";
 import {
   ChartContainer,
@@ -14,27 +13,41 @@ export function PassesStatusPieChart() {
 
   const chartData = useMemo(() => {
     if (!passes.length) return [];
+    
+    const now = new Date();
+    
+    // Calculate actual status for each pass
     const counts = passes.reduce(
       (acc, pass) => {
-        acc[pass.status] = (acc[pass.status] || 0) + 1;
+        // Determine actual status
+        let actualStatus: string;
+        if (pass.status === "revoked") {
+          actualStatus = "revoked";
+        } else if (pass.expiresAt.toDate() < now) {
+          actualStatus = "expired";
+        } else {
+          actualStatus = "active";
+        }
+        
+        acc[actualStatus] = (acc[actualStatus] || 0) + 1;
         return acc;
       },
       {} as Record<string, number>
     );
-    
+
     return [
       { name: "Active", value: counts.active || 0, fill: "hsl(var(--chart-1))" },
       { name: "Expired", value: counts.expired || 0, fill: "hsl(var(--chart-2))" },
       { name: "Revoked", value: counts.revoked || 0, fill: "hsl(var(--chart-3))" },
     ].filter(item => item.value > 0);
   }, [passes]);
-  
+
   const totalPasses = useMemo(() => passes.length, [passes]);
 
   if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
-  
+
   if (!chartData.length) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
   }
