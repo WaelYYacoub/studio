@@ -1,28 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import dynamic from 'next/dynamic';
+import { useMemo } from "react";
 import { CardDescription } from "../ui/card";
 import { useData } from "@/context/data-provider";
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
-// Register Chart.js components
-if (typeof window !== 'undefined') {
-  Chart.register(...registerables);
-}
+// Dynamic import to avoid SSR issues
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export function PassesStatusPieChart() {
   const { passes, loading } = useData();
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
 
   const { chartData, totalPasses } = useMemo(() => {
-    if (!passes.length) return { chartData: { data: [], labels: [] }, totalPasses: 0 };
+    if (!passes.length) return { chartData: { series: [], labels: [] }, totalPasses: 0 };
     
     const now = new Date();
     
     // Calculate actual status for each pass
     const counts = passes.reduce(
       (acc, pass) => {
+        // Determine actual status
         let actualStatus: string;
         if (pass.status === "revoked") {
           actualStatus = "revoked";
@@ -40,96 +37,77 @@ export function PassesStatusPieChart() {
 
     return {
       chartData: {
-        data: [counts.active || 0, counts.expired || 0, counts.revoked || 0],
+        series: [counts.active || 0, counts.expired || 0, counts.revoked || 0],
         labels: ["Active", "Expired", "Revoked"]
       },
       totalPasses: passes.length
     };
   }, [passes]);
 
-  useEffect(() => {
-    if (!chartRef.current || loading) return;
-
-    // Destroy previous chart
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
-    }
-
-    const ctx = chartRef.current.getContext('2d');
-    if (!ctx) return;
-
-    const config: ChartConfiguration = {
+  const options: ApexCharts.ApexOptions = {
+    chart: {
       type: 'pie',
-      data: {
-        labels: chartData.labels,
-        datasets: [{
-          data: chartData.data,
-          backgroundColor: [
-            '#22c55e', // Green for Active
-            '#ef4444', // Red for Expired
-            '#dc2626'  // Dark Red for Revoked
-          ],
-          borderColor: '#ffffff',
-          borderWidth: 3,
-          hoverOffset: 15
-        }]
+      toolbar: {
+        show: false
+      }
+    },
+    labels: chartData.labels,
+    colors: ['#22c55e', '#ef4444', '#dc2626'], // Green, Red, Dark Red
+    dataLabels: {
+      enabled: true,
+      formatter: function(val: number) {
+        return Math.round(val) + "%";
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              padding: 15,
-              font: {
-                size: 13
-              },
-              usePointStyle: true,
-              pointStyle: 'circle'
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const label = context.label || '';
-                const value = context.parsed || 0;
-                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(0);
-                return `${label}: ${value} (${percentage}%)`;
-              }
-            }
-          },
-          datalabels: {
-            color: '#fff',
-            font: {
-              weight: 'bold',
-              size: 16
-            },
-            formatter: (value: number, context: any) => {
-              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-              const percentage = ((value / total) * 100).toFixed(0);
-              return percentage + '%';
-            }
-          }
+      style: {
+        fontSize: '16px',
+        fontWeight: 'bold',
+        colors: ['#fff']
+      },
+      dropShadow: {
+        enabled: true,
+        blur: 3,
+        opacity: 0.8
+      }
+    },
+    legend: {
+      position: 'bottom',
+      horizontalAlign: 'center',
+      fontSize: '14px',
+      markers: {
+        width: 12,
+        height: 12,
+        radius: 12
+      }
+    },
+    plotOptions: {
+      pie: {
+        expandOnClick: true,
+        dataLabels: {
+          offset: 0,
+          minAngleToShowLabel: 10
         }
       }
-    };
-
-    chartInstance.current = new Chart(ctx, config);
-
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ['#fff']
+    },
+    tooltip: {
+      enabled: true,
+      y: {
+        formatter: function(val: number) {
+          return val + " passes";
+        }
       }
-    };
-  }, [chartData, loading]);
+    }
+  };
 
   if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
 
-  if (!chartData.data.length || chartData.data.every(d => d === 0)) {
+  if (!chartData.series.length || chartData.series.every(s => s === 0)) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
   }
 
@@ -138,8 +116,13 @@ export function PassesStatusPieChart() {
       <CardDescription>
         Total of {totalPasses} passes in the system
       </CardDescription>
-      <div className="h-[250px] w-full relative">
-        <canvas ref={chartRef} />
+      <div className="h-[250px] w-full">
+        <Chart
+          options={options}
+          series={chartData.series}
+          type="pie"
+          height="100%"
+        />
       </div>
     </>
   );
