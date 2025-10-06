@@ -69,9 +69,8 @@ export function PassesStatusPieChart() {
             nameKey="name"
             innerRadius={60}
             strokeWidth={5}
-            activeIndex={0}
             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            labelLine={false}
+            labelLine={true}
             activeShape={({
                 outerRadius = 0,
                 ...props
