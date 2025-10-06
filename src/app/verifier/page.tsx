@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { ShieldCheck, QrCode } from 'lucide-react';
+import { ShieldCheck, QrCode, LayoutDashboard } from 'lucide-react';
 import ManualSearch from '@/components/verifier/manual-search';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import QrScanner from '@/components/verifier/qr-scanner';
@@ -18,8 +18,10 @@ import {
 import { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firestore';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function VerifierPage() {
+  const { user } = useAuth();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannedPass, setScannedPass] = useState<any>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -27,7 +29,7 @@ export default function VerifierPage() {
   const handleScanSuccess = async (decodedText: string) => {
     // Prevent duplicate scans
     if (isValidating || scannedPass) return;
-    
+
     console.log("Processing scanned QR:", decodedText);
     setIsValidating(true);
     setIsScannerOpen(false); // Close scanner immediately
@@ -77,9 +79,18 @@ export default function VerifierPage() {
             <ShieldCheck className="h-7 w-7 text-primary" />
             <span className="font-headline text-xl font-bold">Guardian Gate Verifier</span>
           </div>
-          <Button asChild>
-            <Link href="/login">Sign In</Link>
-          </Button>
+          {user ? (
+            <Button asChild>
+              <Link href="/admin/dashboard">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Dashboard
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/login">Sign In</Link>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -141,7 +152,7 @@ export default function VerifierPage() {
               {isValidating ? (
                 <div className="text-center py-8">Validating pass...</div>
               ) : (
-                <QrScanner 
+                <QrScanner
                   onScanSuccess={handleScanSuccess}
                   onScanError={(error) => console.error("Scanner error:", error)}
                 />
