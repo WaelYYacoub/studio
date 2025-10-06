@@ -5,7 +5,6 @@ import { PassesStatusPieChart } from '@/components/charts/passes-status-pie-char
 import { PassesByLocationChart } from '@/components/charts/passes-by-location-chart';
 import { PassesByCompanyChart } from '@/components/charts/passes-by-company-chart';
 import { BarChart, PieChart, Building, MapPin } from 'lucide-react';
-import { UsageInsights } from '@/components/charts/usage-insights';
 
 export default function StatisticsPage() {
   return (
@@ -16,10 +15,6 @@ export default function StatisticsPage() {
           Visualize pass data and gain insights into usage patterns.
         </p>
       </div>
-
-      <Suspense fallback={<p>Loading insights...</p>}>
-        <UsageInsights />
-      </Suspense>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         <Card>

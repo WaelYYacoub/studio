@@ -51,3 +51,4 @@ apphosting.yaml
 yarn.lock
 package-lock.json
 *.log
+.env.local
