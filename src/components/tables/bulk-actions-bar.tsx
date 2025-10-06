@@ -319,7 +319,12 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
 
   const handlePrintQRCodes = async () => {
     // Filter passes that have valid QR payloads
-    const validPasses = selectedPasses.filter(pass => pass.qrPayload && pass.qrPayload.trim() !== '');
+    const validPasses = selectedPasses.filter(pass => {
+      return pass.qrPayload && 
+             pass.qrPayload !== '' && 
+             pass.qrPayload !== null && 
+             pass.qrPayload !== undefined;
+    });
     
     if (validPasses.length === 0) {
       toast({
