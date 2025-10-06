@@ -1,15 +1,19 @@
 "use client";
 
-import dynamic from 'next/dynamic';
-import { useMemo } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { format, getMonth, isThisYear } from "date-fns";
 import { CardDescription } from "../ui/card";
 import { useData } from "@/context/data-provider";
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+if (typeof window !== 'undefined') {
+  Chart.register(...registerables);
+}
 
 export function PassesByMonthChart() {
   const { passes, loading } = useData();
+  const chartRef = useRef<HTMLCanvasElement>(null);
+  const chartInstance = useRef<Chart | null>(null);
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -24,7 +28,6 @@ export function PassesByMonthChart() {
       if (isThisYear(createdAtDate)) {
         const monthIndex = getMonth(createdAtDate);
         
-        // Calculate actual status
         let actualStatus: string;
         if (pass.status === "revoked") {
           actualStatus = "expired";
@@ -43,100 +46,119 @@ export function PassesByMonthChart() {
     });
 
     return {
-      categories: monthlyData.map(d => d.month),
-      series: [
+      labels: monthlyData.map(d => d.month),
+      datasets: [
         {
-          name: 'Active',
-          data: monthlyData.map(d => d.active)
+          label: 'Active',
+          data: monthlyData.map(d => d.active),
+          backgroundColor: '#22c55e',
+          borderColor: '#16a34a',
+          borderWidth: 2,
+          borderRadius: 6,
+          barThickness: 30
         },
         {
-          name: 'Expired',
-          data: monthlyData.map(d => d.expired)
+          label: 'Expired',
+          data: monthlyData.map(d => d.expired),
+          backgroundColor: '#ef4444',
+          borderColor: '#dc2626',
+          borderWidth: 2,
+          borderRadius: 6,
+          barThickness: 30
         }
       ]
     };
   }, [passes]);
 
-  const options: ApexCharts.ApexOptions = {
-    chart: {
-      type: 'bar',
-      toolbar: {
-        show: false
-      },
-      animations: {
-        enabled: true
-      }
-    },
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: '55%',
-        borderRadius: 4,
-        dataLabels: {
-          position: 'top',
-        }
-      }
-    },
-    dataLabels: {
-      enabled: true,
-      offsetY: -20,
-      style: {
-        fontSize: '12px',
-        fontWeight: 'bold',
-        colors: ['#22c55e', '#ef4444']
-      }
-    },
-    stroke: {
-      show: true,
-      width: 2,
-      colors: ['transparent']
-    },
-    xaxis: {
-      categories: chartData.categories,
-      labels: {
-        style: {
-          fontSize: '12px'
-        }
-      }
-    },
-    yaxis: {
-      labels: {
-        style: {
-          fontSize: '12px'
-        }
-      }
-    },
-    colors: ['#22c55e', '#ef4444'], // Green for Active, Red for Expired
-    fill: {
-      opacity: 1,
-      type: 'gradient',
-      gradient: {
-        shade: 'light',
-        type: 'vertical',
-        shadeIntensity: 0.3,
-        gradientToColors: ['#16a34a', '#dc2626'],
-        inverseColors: false,
-        opacityFrom: 1,
-        opacityTo: 0.9,
-        stops: [0, 100]
-      }
-    },
-    legend: {
-      position: 'bottom',
-      horizontalAlign: 'center',
-      fontSize: '14px'
-    },
-    tooltip: {
-      y: {
-        formatter: function(val: number) {
-          return val + " passes";
-        }
-      }
-    },
-    grid: {
-      borderColor: '#f1f1f1',
+  useEffect(() => {
+    if (!chartRef.current || loading) return;
+
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
     }
-  };
+
+    const ctx = chartRef.current.getContext('2d');
+    if (!ctx) return;
+
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: chartData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 15,
+              font: {
+                size: 13
+              },
+              usePointStyle: true
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `${context.dataset.label}: ${context.parsed.y} passes`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: {
+                size: 11
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: '#f1f1f1'
+            },
+            ticks: {
+              font: {
+                size: 11
+              },
+              stepSize: 1
+            }
+          }
+        }
+      },
+      plugins: [{
+        id: 'datalabels',
+        afterDatasetsDraw(chart) {
+          const ctx = chart.ctx;
+          chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            meta.data.forEach((bar: any, index) => {
+              const data = dataset.data[index] as number;
+              if (data > 0) {
+                ctx.fillStyle = dataset.backgroundColor as string;
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(data.toString(), bar.x, bar.y - 5);
+              }
+            });
+          });
+        }
+      }]
+    };
+
+    chartInstance.current = new Chart(ctx, config);
+
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
+  }, [chartData, loading]);
 
   if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
@@ -145,13 +167,8 @@ export function PassesByMonthChart() {
   return (
     <>
       <CardDescription>Active vs. Expired passes this year</CardDescription>
-      <div className="h-[250px] w-full">
-        <Chart
-          options={options}
-          series={chartData.series}
-          type="bar"
-          height="100%"
-        />
+      <div className="h-[250px] w-full relative">
+        <canvas ref={chartRef} />
       </div>
     </>
   );
