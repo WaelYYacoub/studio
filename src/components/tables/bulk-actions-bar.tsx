@@ -102,14 +102,18 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
     const now = new Date();
     const exportDate = format(now, "PPpp");
     
-    // Calculate statistics
+    // Helper to calculate actual status
+    const getActualStatus = (pass: Pass): string => {
+      if (pass.status === "revoked") return "REVOKED";
+      const expiryDate = pass.expiresAt.toDate();
+      return expiryDate < now ? "EXPIRED" : "ACTIVE";
+    };
+    
+    // Calculate statistics using actual status
     const statusCounts = {
-      active: selectedPasses.filter(p => p.status === "active").length,
-      expired: selectedPasses.filter(p => {
-        const expiry = p.expiresAt.toDate();
-        return expiry < now && p.status !== "revoked";
-      }).length,
-      revoked: selectedPasses.filter(p => p.status === "revoked").length,
+      active: selectedPasses.filter(p => getActualStatus(p) === "ACTIVE").length,
+      expired: selectedPasses.filter(p => getActualStatus(p) === "EXPIRED").length,
+      revoked: selectedPasses.filter(p => getActualStatus(p) === "REVOKED").length,
     };
 
     const typeCounts = {
@@ -226,7 +230,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       pass.type.charAt(0).toUpperCase() + pass.type.slice(1),
       pass.type === "standard" ? pass.ownerName : pass.visitorName,
       pass.type === "standard" ? pass.ownerCompany : pass.createdByCompany,
-      pass.status.toUpperCase(),
+      getActualStatus(pass), // Use calculated status instead of pass.status
       pass.location,
       pass.type === "standard" ? pass.serial : "N/A",
       format(pass.createdAt.toDate(), "PP"),
