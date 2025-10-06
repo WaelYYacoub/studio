@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Ban, Trash2, Download, Printer, X } from "lucide-react";
+import { Ban, Trash2, FileSpreadsheet, Printer, X } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -18,6 +18,7 @@ import { doc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firestore";
 import type { Pass } from "@/types";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface BulkActionsBarProps {
   selectedPasses: Pass[];
@@ -97,7 +98,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     const now = new Date();
     const exportDate = format(now, "PPpp");
     
@@ -116,42 +117,59 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       visitor: selectedPasses.filter(p => p.type === "visitor").length,
     };
 
-    // Build CSV with report header
-    const reportHeader = [
-      "GUARDIAN GATE - PASS RECORDS REPORT",
-      "",
-      `Report Generated: ${exportDate}`,
-      `Total Records: ${selectedCount}`,
-      "",
-      "SUMMARY STATISTICS",
-      `Active Passes: ${statusCounts.active}`,
-      `Expired Passes: ${statusCounts.expired}`,
-      `Revoked Passes: ${statusCounts.revoked}`,
-      "",
-      `Standard Passes: ${typeCounts.standard}`,
-      `Visitor Passes: ${typeCounts.visitor}`,
-      "",
-      "DETAILED RECORDS",
-      "",
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // SHEET 1: SUMMARY
+    const summaryData = [
+      ["GUARDIAN GATE - PASS RECORDS REPORT"],
+      [],
+      ["Report Generated:", exportDate],
+      ["Total Records:", selectedCount],
+      [],
+      ["SUMMARY STATISTICS"],
+      [],
+      ["Status Breakdown"],
+      ["Active Passes:", statusCounts.active],
+      ["Expired Passes:", statusCounts.expired],
+      ["Revoked Passes:", statusCounts.revoked],
+      [],
+      ["Type Breakdown"],
+      ["Standard Passes:", typeCounts.standard],
+      ["Visitor Passes:", typeCounts.visitor],
     ];
 
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+
+    // Set column widths for summary
+    wsSummary['!cols'] = [
+      { wch: 25 },
+      { wch: 20 }
+    ];
+
+    // Merge cells for title
+    wsSummary['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }
+    ];
+
+    // SHEET 2: DETAILED RECORDS
     const headers = [
       "No.",
       "Plate Number",
       "Pass Type",
-      "Owner/Visitor Name",
+      "Owner/Visitor",
       "Company",
       "Status",
       "Location",
-      "Serial Number",
+      "Serial",
       "Issue Date",
       "Expiry Date",
       "Created By",
       "Pass ID"
     ];
-    
+
     const rows = selectedPasses.map((pass, index) => [
-      (index + 1).toString(),
+      index + 1,
       `${pass.plateAlpha}-${pass.plateNum}`,
       pass.type.charAt(0).toUpperCase() + pass.type.slice(1),
       pass.type === "standard" ? pass.ownerName : pass.visitorName,
@@ -165,28 +183,37 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       pass.id,
     ]);
 
-    // Build final CSV content
-    const csvContent = [
-      ...reportHeader,
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
-      "",
-      "--- END OF REPORT ---",
-    ].join("\n");
+    const wsData = XLSX.utils.aoa_to_sheet([headers, ...rows]);
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Guardian-Gate-Report-${format(now, "yyyy-MM-dd-HHmm")}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Set column widths for detailed records
+    wsData['!cols'] = [
+      { wch: 6 },  // No.
+      { wch: 15 }, // Plate
+      { wch: 12 }, // Type
+      { wch: 20 }, // Owner
+      { wch: 25 }, // Company
+      { wch: 10 }, // Status
+      { wch: 12 }, // Location
+      { wch: 15 }, // Serial
+      { wch: 15 }, // Issue
+      { wch: 15 }, // Expiry
+      { wch: 20 }, // Created By
+      { wch: 25 }, // Pass ID
+    ];
+
+    // Enable auto-filter on detailed records
+    wsData['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: headers.length - 1 } }) };
+
+    // Add sheets to workbook
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+    XLSX.utils.book_append_sheet(wb, wsData, "Detailed Records");
+
+    // Generate file and trigger download
+    XLSX.writeFile(wb, `Guardian-Gate-Report-${format(now, "yyyy-MM-dd-HHmm")}.xlsx`);
 
     toast({
-      title: "Report Exported",
-      description: `Generated report with ${selectedCount} pass record(s).`,
+      title: "Excel Report Generated",
+      description: `Exported ${selectedCount} pass record(s) to Excel.`,
     });
   };
 
@@ -291,12 +318,12 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
             </Button>
             <Button
               size="sm"
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               disabled={isProcessing}
               className="bg-blue-500 hover:bg-blue-600 text-white border-0"
             >
-              <Download className="mr-2 h-4 w-4" />
-              Export Report
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export Excel
             </Button>
             <Button
               size="sm"
