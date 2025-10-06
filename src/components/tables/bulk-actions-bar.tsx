@@ -356,12 +356,12 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // Card dimensions - matching the uploaded image
-      const cardWidth = 70;
-      const cardHeight = 90;
-      const margin = 20;
-      const cols = 2;
-      const rows = 2;
+      // Card dimensions - 3x3 layout (9 cards per page)
+      const cardWidth = 55;
+      const cardHeight = 70;
+      const margin = 15;
+      const cols = 3;
+      const rows = 3;
       const spacingX = (pageWidth - (2 * margin) - (cols * cardWidth)) / (cols - 1);
       const spacingY = (pageHeight - (2 * margin) - (rows * cardHeight)) / (rows - 1);
 
@@ -399,16 +399,16 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
           pdf.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD'); // Filled and drawn with rounded corners
 
           // Add QR code (centered in upper portion of card)
-          const qrSize = 45;
+          const qrSize = 35;
           const qrX = x + (cardWidth - qrSize) / 2;
-          const qrY = y + 15;
+          const qrY = y + 10;
           pdf.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
 
           // Add plate number (centered below QR code)
-          pdf.setFontSize(16);
+          pdf.setFontSize(12);
           pdf.setTextColor(0, 0, 0); // Black text
           pdf.setFont(undefined, 'normal');
-          pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + cardWidth / 2, qrY + qrSize + 12, { align: 'center' });
+          pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + cardWidth / 2, qrY + qrSize + 10, { align: 'center' });
 
           position++;
         } catch (qrError) {
