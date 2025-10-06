@@ -1,5 +1,4 @@
 "use client";
-
 import {
   createContext,
   useState,
@@ -7,7 +6,7 @@ import {
   type ReactNode,
   useContext,
 } from "react";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, writeBatch, doc } from "firebase/firestore";
 import { db, passConverter, userConverter } from "@/lib/firestore";
 import type { AppUser, Pass } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -45,8 +44,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const unsubscribePasses = onSnapshot(
       passesQuery,
-      (snapshot) => {
+      async (snapshot) => {
         const passesData = snapshot.docs.map((doc) => doc.data());
+        
+        // Update expired passes in Firestore (background operation)
+        const now = new Date();
+        const batch = writeBatch(db);
+        let updateCount = 0;
+        
+        snapshot.docs.forEach((docSnap) => {
+          const pass = docSnap.data();
+          // Check if pass is active but expired
+          if (pass.status === "active" && pass.expiresAt.toDate() < now) {
+            const passRef = doc(db, "passes", pass.id);
+            batch.update(passRef, { status: "expired" });
+            updateCount++;
+          }
+        });
+        
+        // Commit batch if there are updates
+        if (updateCount > 0) {
+          try {
+            await batch.commit();
+            console.log(`Auto-updated ${updateCount} expired pass(es) in Firestore`);
+          } catch (error) {
+            console.error("Failed to update expired passes:", error);
+          }
+        }
+        
         setPasses(passesData);
         setLoading(false);
       },
