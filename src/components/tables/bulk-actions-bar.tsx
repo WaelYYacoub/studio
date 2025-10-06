@@ -206,47 +206,49 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
 
   return (
     <>
-      <div className="flex items-center justify-between rounded-lg border bg-muted p-4">
+      <div className="flex items-center justify-between rounded-lg border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">
-            {selectedCount} pass(es) selected
-          </span>
+          <div className="flex items-center gap-2 rounded-md bg-primary px-3 py-1.5">
+            <span className="text-sm font-semibold text-primary-foreground">
+              {selectedCount} Selected
+            </span>
+          </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
               size="sm"
               onClick={() => setShowRevokeDialog(true)}
               disabled={activePassCount === 0 || isProcessing}
+              className="bg-orange-500 hover:bg-orange-600 text-white border-0"
             >
               <Ban className="mr-2 h-4 w-4" />
               Revoke ({activePassCount})
             </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={() => setShowDeleteDialog(true)}
               disabled={isProcessing}
+              className="bg-red-500 hover:bg-red-600 text-white border-0"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={handleExportCSV}
               disabled={isProcessing}
+              className="bg-blue-500 hover:bg-blue-600 text-white border-0"
             >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={handlePrintQRCodes}
               disabled={isProcessing}
+              className="bg-green-500 hover:bg-green-600 text-white border-0"
             >
               <Printer className="mr-2 h-4 w-4" />
-              Print QR Codes
+              Print QR
             </Button>
           </div>
         </div>
@@ -254,8 +256,10 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
           variant="ghost"
           size="sm"
           onClick={onClearSelection}
+          className="hover:bg-destructive/10 hover:text-destructive"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 mr-1" />
+          Clear
         </Button>
       </div>
 
@@ -270,7 +274,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkRevoke} disabled={isProcessing}>
+            <AlertDialogAction onClick={handleBulkRevoke} disabled={isProcessing} className="bg-orange-500 hover:bg-orange-600">
               {isProcessing ? "Revoking..." : "Revoke"}
             </AlertDialogAction>
           </AlertDialogFooter>
