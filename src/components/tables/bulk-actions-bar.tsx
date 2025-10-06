@@ -345,7 +345,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
 
     toast({
       title: "Generating PDF",
-      description: `Creating ${validPasses.length} QR code(s)...`,
+      description: `Creating ${validPasses.length} pass card(s)...`,
     });
 
     try {
@@ -353,11 +353,17 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
       const QRCode = (await import("qrcode")).default;
 
       const pdf = new jsPDF();
-      const qrSize = 60;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      // Card dimensions - matching the uploaded image
+      const cardWidth = 70;
+      const cardHeight = 90;
       const margin = 20;
       const cols = 2;
-      const rows = 3;
-      const spacing = 10;
+      const rows = 2;
+      const spacingX = (pageWidth - (2 * margin) - (cols * cardWidth)) / (cols - 1);
+      const spacingY = (pageHeight - (2 * margin) - (rows * cardHeight)) / (rows - 1);
 
       let position = 0;
 
@@ -366,11 +372,11 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
           pdf.addPage();
         }
 
-        const col = (position % cols);
+        const col = position % cols;
         const row = Math.floor((position % (cols * rows)) / cols);
         
-        const x = margin + col * (qrSize + spacing);
-        const y = margin + row * (qrSize + spacing + 15);
+        const x = margin + col * (cardWidth + spacingX);
+        const y = margin + row * (cardHeight + spacingY);
 
         // Generate QR code with error handling
         try {
@@ -380,24 +386,33 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
             qrString = JSON.stringify(qrString);
           }
           
-          console.log(`Generating QR for ${pass.plateAlpha}-${pass.plateNum}:`, qrString);
-          
           const qrDataUrl = await QRCode.toDataURL(qrString, {
             width: 256,
             margin: 1,
             errorCorrectionLevel: 'M'
           });
 
-          pdf.addImage(qrDataUrl, "PNG", x, y, qrSize, qrSize);
-          pdf.setFontSize(10);
-          pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + qrSize / 2, y + qrSize + 5, { align: "center" });
-          pdf.setFontSize(8);
-          pdf.text(`Expires: ${format(pass.expiresAt.toDate(), "PP")}`, x + qrSize / 2, y + qrSize + 10, { align: "center" });
+          // Draw card border (rounded rectangle effect with thin border)
+          pdf.setDrawColor(200, 200, 200); // Light gray border
+          pdf.setLineWidth(0.5);
+          pdf.setFillColor(255, 255, 255); // White background
+          pdf.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD'); // Filled and drawn with rounded corners
+
+          // Add QR code (centered in upper portion of card)
+          const qrSize = 45;
+          const qrX = x + (cardWidth - qrSize) / 2;
+          const qrY = y + 15;
+          pdf.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+
+          // Add plate number (centered below QR code)
+          pdf.setFontSize(16);
+          pdf.setTextColor(0, 0, 0); // Black text
+          pdf.setFont(undefined, 'normal');
+          pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + cardWidth / 2, qrY + qrSize + 12, { align: 'center' });
 
           position++;
         } catch (qrError) {
           console.error(`Failed to generate QR for ${pass.plateAlpha}-${pass.plateNum}:`, qrError);
-          console.error(`QR Payload type: ${typeof pass.qrPayload}`, pass.qrPayload);
           // Skip this QR code and continue
         }
       }
@@ -406,11 +421,11 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
         throw new Error("No valid QR codes could be generated");
       }
 
-      pdf.save(`Guardian-Gate-QR-Codes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      pdf.save(`Guardian-Gate-Passes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
 
       toast({
         title: "PDF Generated",
-        description: `Created PDF with ${position} QR code(s).`,
+        description: `Created PDF with ${position} pass card(s).`,
       });
     } catch (error) {
       console.error("PDF generation error:", error);
