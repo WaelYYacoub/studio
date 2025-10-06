@@ -374,7 +374,15 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
 
         // Generate QR code with error handling
         try {
-          const qrDataUrl = await QRCode.toDataURL(pass.qrPayload, {
+          // Convert qrPayload to string if it's an object
+          let qrString = pass.qrPayload;
+          if (typeof qrString === 'object') {
+            qrString = JSON.stringify(qrString);
+          }
+          
+          console.log(`Generating QR for ${pass.plateAlpha}-${pass.plateNum}:`, qrString);
+          
+          const qrDataUrl = await QRCode.toDataURL(qrString, {
             width: 256,
             margin: 1,
             errorCorrectionLevel: 'M'
@@ -389,6 +397,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
           position++;
         } catch (qrError) {
           console.error(`Failed to generate QR for ${pass.plateAlpha}-${pass.plateNum}:`, qrError);
+          console.error(`QR Payload type: ${typeof pass.qrPayload}`, pass.qrPayload);
           // Skip this QR code and continue
         }
       }
