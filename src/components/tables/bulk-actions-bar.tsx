@@ -98,38 +98,95 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
   };
 
   const handleExportCSV = () => {
-    const headers = ["Plate", "Type", "Owner/Visitor", "Company", "Status", "Expires At", "Location", "Created By", "Created At"];
+    const now = new Date();
+    const exportDate = format(now, "PPpp");
     
-    const rows = selectedPasses.map(pass => [
+    // Calculate statistics
+    const statusCounts = {
+      active: selectedPasses.filter(p => p.status === "active").length,
+      expired: selectedPasses.filter(p => {
+        const expiry = p.expiresAt.toDate();
+        return expiry < now && p.status !== "revoked";
+      }).length,
+      revoked: selectedPasses.filter(p => p.status === "revoked").length,
+    };
+
+    const typeCounts = {
+      standard: selectedPasses.filter(p => p.type === "standard").length,
+      visitor: selectedPasses.filter(p => p.type === "visitor").length,
+    };
+
+    // Build CSV with report header
+    const reportHeader = [
+      "GUARDIAN GATE - PASS RECORDS REPORT",
+      "",
+      `Report Generated: ${exportDate}`,
+      `Total Records: ${selectedCount}`,
+      "",
+      "SUMMARY STATISTICS",
+      `Active Passes: ${statusCounts.active}`,
+      `Expired Passes: ${statusCounts.expired}`,
+      `Revoked Passes: ${statusCounts.revoked}`,
+      "",
+      `Standard Passes: ${typeCounts.standard}`,
+      `Visitor Passes: ${typeCounts.visitor}`,
+      "",
+      "DETAILED RECORDS",
+      "",
+    ];
+
+    const headers = [
+      "No.",
+      "Plate Number",
+      "Pass Type",
+      "Owner/Visitor Name",
+      "Company",
+      "Status",
+      "Location",
+      "Serial Number",
+      "Issue Date",
+      "Expiry Date",
+      "Created By",
+      "Pass ID"
+    ];
+    
+    const rows = selectedPasses.map((pass, index) => [
+      (index + 1).toString(),
       `${pass.plateAlpha}-${pass.plateNum}`,
-      pass.type,
+      pass.type.charAt(0).toUpperCase() + pass.type.slice(1),
       pass.type === "standard" ? pass.ownerName : pass.visitorName,
       pass.type === "standard" ? pass.ownerCompany : pass.createdByCompany,
-      pass.status,
-      format(pass.expiresAt.toDate(), "PP"),
+      pass.status.toUpperCase(),
       pass.location,
+      pass.type === "standard" ? pass.serial : "N/A",
+      format(pass.createdAt.toDate(), "PP"),
+      format(pass.expiresAt.toDate(), "PP"),
       pass.createdByName,
-      format(pass.createdAt.toDate(), "PP p"),
+      pass.id,
     ]);
 
+    // Build final CSV content
     const csvContent = [
+      ...reportHeader,
       headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
+      "",
+      "--- END OF REPORT ---",
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `passes-export-${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.setAttribute("download", `Guardian-Gate-Report-${format(now, "yyyy-MM-dd-HHmm")}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
     toast({
-      title: "Export Complete",
-      description: `Exported ${selectedCount} pass(es) to CSV.`,
+      title: "Report Exported",
+      description: `Generated report with ${selectedCount} pass record(s).`,
     });
   };
 
@@ -188,7 +245,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
         position++;
       }
 
-      pdf.save(`qr-codes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      pdf.save(`Guardian-Gate-QR-Codes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
 
       toast({
         title: "PDF Generated",
@@ -239,7 +296,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
               className="bg-blue-500 hover:bg-blue-600 text-white border-0"
             >
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export Report
             </Button>
             <Button
               size="sm"
