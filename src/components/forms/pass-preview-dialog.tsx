@@ -26,27 +26,84 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
   const printRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('print-area-dialog');
-    const windowUrl = 'about:blank';
-    const uniqueName = new Date().getTime();
-    const windowName = 'Print' + uniqueName;
-    const printWindow = window.open(windowUrl, windowName, 'left=50000,top=50000,width=0,height=0');
+  const handlePrint = async () => {
+    if (!pass.qrPayload) {
+      toast({
+        variant: "destructive",
+        title: "No QR Code",
+        description: "This pass does not have a QR code to print.",
+      });
+      return;
+    }
 
-    if (printWindow && printContent) {
-        printWindow.document.write(`<html><head><title>Print Pass</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-        `);
-        printWindow.document.write('<style>body { font-family: "Inter", sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .print-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; max-width: 400px; margin: 20px auto; text-align: center; background-color: #fff; } h2 { font-family: "Space Grotesk", sans-serif; font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 1rem; color: #111827; } .details { display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem 1rem; text-align: left; font-size: 0.875rem; } .details-label { font-weight: 600; color: #6b7280; } .details-value { text-transform: capitalize; } .details-value.status-active { color: #16a34a; font-weight: 700; } .qr-container { margin-top: 1.5rem; display: inline-flex; flex-direction: column; align-items: center; gap: 0.5rem; border-radius: 0.5rem; border: 1px solid #f3f4f6; padding: 1rem; } .qr-plate { font-size: 0.75rem; color: #6b7280; } img { max-width: 150px; margin: auto; border-radius: 0.5rem; } </style>');
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(printContent.innerHTML);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
+    toast({
+      title: "Generating PDF",
+      description: "Creating pass card...",
+    });
+
+    try {
+      // Dynamic imports
+      const { jsPDF } = await import("jspdf");
+      const QRCode = (await import("qrcode")).default;
+
+      const pdf = new jsPDF();
+      
+      // Card dimensions - 3x3 layout
+      const cardWidth = 55;
+      const cardHeight = 70;
+      const margin = 15;
+      
+      // Center single card on page
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const x = (pageWidth - cardWidth) / 2;
+      const y = (pageHeight - cardHeight) / 2;
+
+      // Convert qrPayload to string if it's an object
+      let qrString = pass.qrPayload;
+      if (typeof qrString === 'object') {
+        qrString = JSON.stringify(qrString);
+      }
+      
+      const qrDataUrl = await QRCode.toDataURL(qrString, {
+        width: 256,
+        margin: 1,
+        errorCorrectionLevel: 'M'
+      });
+
+      // Draw card border (rounded rectangle)
+      pdf.setDrawColor(200, 200, 200); // Light gray border
+      pdf.setLineWidth(0.5);
+      pdf.setFillColor(255, 255, 255); // White background
+      pdf.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD');
+
+      // Add QR code (centered in upper portion of card)
+      const qrSize = 35;
+      const qrX = x + (cardWidth - qrSize) / 2;
+      const qrY = y + 10;
+      pdf.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+
+      // Add plate number (centered below QR code)
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0); // Black text
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + cardWidth / 2, qrY + qrSize + 10, { align: 'center' });
+
+      // Auto-print
+      pdf.autoPrint();
+      window.open(pdf.output('bloburl'), '_blank');
+
+      toast({
+        title: "Print Ready",
+        description: "Pass card opened in new window.",
+      });
+    } catch (error) {
+      console.error("Print error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate print card.",
+      });
     }
   };
 
