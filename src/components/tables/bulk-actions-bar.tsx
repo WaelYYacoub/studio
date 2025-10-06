@@ -318,9 +318,29 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
   };
 
   const handlePrintQRCodes = async () => {
+    // Filter passes that have valid QR payloads
+    const validPasses = selectedPasses.filter(pass => pass.qrPayload && pass.qrPayload.trim() !== '');
+    
+    if (validPasses.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Valid QR Codes",
+        description: "Selected passes do not have QR codes generated.",
+      });
+      return;
+    }
+
+    if (validPasses.length < selectedPasses.length) {
+      const skipped = selectedPasses.length - validPasses.length;
+      toast({
+        title: "Notice",
+        description: `${skipped} pass(es) skipped - no QR code data available.`,
+      });
+    }
+
     toast({
       title: "Generating PDF",
-      description: "Creating QR codes PDF...",
+      description: `Creating ${validPasses.length} QR code(s)...`,
     });
 
     try {
@@ -336,7 +356,7 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
 
       let position = 0;
 
-      for (const pass of selectedPasses) {
+      for (const pass of validPasses) {
         if (position % (cols * rows) === 0 && position !== 0) {
           pdf.addPage();
         }
@@ -347,32 +367,43 @@ export function BulkActionsBar({ selectedPasses, onClearSelection, onActionCompl
         const x = margin + col * (qrSize + spacing);
         const y = margin + row * (qrSize + spacing + 15);
 
-        const qrDataUrl = await QRCode.toDataURL(pass.qrPayload, {
-          width: 256,
-          margin: 1,
-        });
+        // Generate QR code with error handling
+        try {
+          const qrDataUrl = await QRCode.toDataURL(pass.qrPayload, {
+            width: 256,
+            margin: 1,
+            errorCorrectionLevel: 'M'
+          });
 
-        pdf.addImage(qrDataUrl, "PNG", x, y, qrSize, qrSize);
-        pdf.setFontSize(10);
-        pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + qrSize / 2, y + qrSize + 5, { align: "center" });
-        pdf.setFontSize(8);
-        pdf.text(`Expires: ${format(pass.expiresAt.toDate(), "PP")}`, x + qrSize / 2, y + qrSize + 10, { align: "center" });
+          pdf.addImage(qrDataUrl, "PNG", x, y, qrSize, qrSize);
+          pdf.setFontSize(10);
+          pdf.text(`${pass.plateAlpha}-${pass.plateNum}`, x + qrSize / 2, y + qrSize + 5, { align: "center" });
+          pdf.setFontSize(8);
+          pdf.text(`Expires: ${format(pass.expiresAt.toDate(), "PP")}`, x + qrSize / 2, y + qrSize + 10, { align: "center" });
 
-        position++;
+          position++;
+        } catch (qrError) {
+          console.error(`Failed to generate QR for ${pass.plateAlpha}-${pass.plateNum}:`, qrError);
+          // Skip this QR code and continue
+        }
+      }
+
+      if (position === 0) {
+        throw new Error("No valid QR codes could be generated");
       }
 
       pdf.save(`Guardian-Gate-QR-Codes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
 
       toast({
         title: "PDF Generated",
-        description: `Created PDF with ${selectedCount} QR code(s).`,
+        description: `Created PDF with ${position} QR code(s).`,
       });
     } catch (error) {
       console.error("PDF generation error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to generate PDF.",
+        description: "Failed to generate PDF. Please try again.",
       });
     }
   };
