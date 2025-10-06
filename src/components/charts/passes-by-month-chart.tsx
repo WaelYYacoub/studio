@@ -1,14 +1,12 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, YAxis, LabelList } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import dynamic from 'next/dynamic';
 import { useMemo } from "react";
 import { format, getMonth, isThisYear } from "date-fns";
 import { CardDescription } from "../ui/card";
 import { useData } from "@/context/data-provider";
+
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export function PassesByMonthChart() {
   const { passes, loading } = useData();
@@ -29,7 +27,7 @@ export function PassesByMonthChart() {
         // Calculate actual status
         let actualStatus: string;
         if (pass.status === "revoked") {
-          actualStatus = "expired"; // Count revoked as expired for this chart
+          actualStatus = "expired";
         } else if (pass.expiresAt.toDate() < now) {
           actualStatus = "expired";
         } else {
@@ -44,8 +42,101 @@ export function PassesByMonthChart() {
       }
     });
 
-    return monthlyData;
+    return {
+      categories: monthlyData.map(d => d.month),
+      series: [
+        {
+          name: 'Active',
+          data: monthlyData.map(d => d.active)
+        },
+        {
+          name: 'Expired',
+          data: monthlyData.map(d => d.expired)
+        }
+      ]
+    };
   }, [passes]);
+
+  const options: ApexCharts.ApexOptions = {
+    chart: {
+      type: 'bar',
+      toolbar: {
+        show: false
+      },
+      animations: {
+        enabled: true
+      }
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '55%',
+        borderRadius: 4,
+        dataLabels: {
+          position: 'top',
+        }
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      offsetY: -20,
+      style: {
+        fontSize: '12px',
+        fontWeight: 'bold',
+        colors: ['#22c55e', '#ef4444']
+      }
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ['transparent']
+    },
+    xaxis: {
+      categories: chartData.categories,
+      labels: {
+        style: {
+          fontSize: '12px'
+        }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: {
+          fontSize: '12px'
+        }
+      }
+    },
+    colors: ['#22c55e', '#ef4444'], // Green for Active, Red for Expired
+    fill: {
+      opacity: 1,
+      type: 'gradient',
+      gradient: {
+        shade: 'light',
+        type: 'vertical',
+        shadeIntensity: 0.3,
+        gradientToColors: ['#16a34a', '#dc2626'],
+        inverseColors: false,
+        opacityFrom: 1,
+        opacityTo: 0.9,
+        stops: [0, 100]
+      }
+    },
+    legend: {
+      position: 'bottom',
+      horizontalAlign: 'center',
+      fontSize: '14px'
+    },
+    tooltip: {
+      y: {
+        formatter: function(val: number) {
+          return val + " passes";
+        }
+      }
+    },
+    grid: {
+      borderColor: '#f1f1f1',
+    }
+  };
 
   if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
@@ -54,31 +145,14 @@ export function PassesByMonthChart() {
   return (
     <>
       <CardDescription>Active vs. Expired passes this year</CardDescription>
-      <ChartContainer
-        config={{
-          active: { label: "Active", color: "#22c55e" }, // Green
-          expired: { label: "Expired", color: "#ef4444" }, // Red
-        }}
-        className="h-[250px] w-full"
-      >
-        <BarChart data={chartData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid vertical={false} />
-          <XAxis
-            dataKey="month"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <YAxis />
-          <Tooltip cursor={false} content={<ChartTooltipContent />} />
-          <Bar dataKey="active" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]}>
-            <LabelList dataKey="active" position="inside" style={{ fill: 'white', fontWeight: 'bold', fontSize: '12px' }} />
-          </Bar>
-          <Bar dataKey="expired" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]}>
-            <LabelList dataKey="expired" position="inside" style={{ fill: 'white', fontWeight: 'bold', fontSize: '12px' }} />
-          </Bar>
-        </BarChart>
-      </ChartContainer>
+      <div className="h-[250px] w-full">
+        <Chart
+          options={options}
+          series={chartData.series}
+          type="bar"
+          height="100%"
+        />
+      </div>
     </>
   );
 }
