@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import type { Pass, PassStatus } from "@/types";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { RecordsTableActions } from "./records-table-actions";
+import { BulkActionsBar } from "./bulk-actions-bar";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -67,6 +68,10 @@ export function RecordsTable() {
     return filteredPasses.slice(start, end);
   }, [filteredPasses, currentPage]);
 
+  const selectedPasses = useMemo(() => {
+    return allPasses.filter(pass => rowSelection[pass.id]);
+  }, [allPasses, rowSelection]);
+
   const handleFilterChange = (key: keyof typeof filters, value: any) => {
       setCurrentPage(1);
       setFilters(prev => ({...prev, [key]: value}));
@@ -87,6 +92,10 @@ export function RecordsTable() {
       ...prev,
       [passId]: checked === true,
     }));
+  };
+
+  const handleClearSelection = () => {
+    setRowSelection({});
   };
 
   const isAllVisibleSelected = paginatedPasses.length > 0 && paginatedPasses.every(pass => rowSelection[pass.id]);
@@ -146,6 +155,18 @@ export function RecordsTable() {
                 </PopoverContent>
             </Popover>
         </div>
+
+      {selectedPasses.length > 0 && (
+        <BulkActionsBar
+          selectedPasses={selectedPasses}
+          onClearSelection={handleClearSelection}
+          onActionComplete={() => {
+            // Refresh will happen automatically via DataProvider
+            handleClearSelection();
+          }}
+        />
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
