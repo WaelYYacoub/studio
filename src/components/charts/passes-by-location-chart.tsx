@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, LabelList } from "recharts";
 import {
   ChartContainer,
   ChartTooltipContent,
@@ -27,7 +27,7 @@ export function PassesByLocationChart() {
   if (loading) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
-  
+
   if (!chartData.length) {
     return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
   }
@@ -39,7 +39,7 @@ export function PassesByLocationChart() {
         config={{
           count: {
             label: "Passes",
-            color: "hsl(var(--chart-1))",
+            color: "#22c55e", // Green
           },
         }}
         className="h-[250px] w-full"
@@ -55,7 +55,9 @@ export function PassesByLocationChart() {
           />
           <YAxis />
           <Tooltip cursor={false} content={<ChartTooltipContent />} />
-          <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+          <Bar dataKey="count" fill="#22c55e" radius={4}>
+            <LabelList dataKey="count" position="top" style={{ fill: '#22c55e', fontWeight: 'bold', fontSize: '12px' }} />
+          </Bar>
         </BarChart>
       </ChartContainer>
     </>

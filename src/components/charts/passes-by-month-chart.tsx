@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, YAxis, LabelList } from "recharts";
 import {
   ChartContainer,
   ChartTooltipContent,
@@ -56,8 +56,8 @@ export function PassesByMonthChart() {
       <CardDescription>Active vs. Expired passes this year</CardDescription>
       <ChartContainer
         config={{
-          active: { label: "Active", color: "hsl(var(--chart-1))" },
-          expired: { label: "Expired", color: "hsl(var(--chart-2))" },
+          active: { label: "Active", color: "#22c55e" }, // Green
+          expired: { label: "Expired", color: "#ef4444" }, // Red
         }}
         className="h-[250px] w-full"
       >
@@ -71,8 +71,12 @@ export function PassesByMonthChart() {
           />
           <YAxis />
           <Tooltip cursor={false} content={<ChartTooltipContent />} />
-          <Bar dataKey="active" stackId="a" fill="var(--color-active)" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="expired" stackId="a" fill="var(--color-expired)" radius={[0, 0, 0, 0]} />
+          <Bar dataKey="active" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]}>
+            <LabelList dataKey="active" position="inside" style={{ fill: 'white', fontWeight: 'bold', fontSize: '12px' }} />
+          </Bar>
+          <Bar dataKey="expired" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]}>
+            <LabelList dataKey="expired" position="inside" style={{ fill: 'white', fontWeight: 'bold', fontSize: '12px' }} />
+          </Bar>
         </BarChart>
       </ChartContainer>
     </>

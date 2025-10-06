@@ -36,9 +36,9 @@ export function PassesStatusPieChart() {
     );
 
     return [
-      { name: "Active", value: counts.active || 0, fill: "hsl(var(--chart-1))" },
-      { name: "Expired", value: counts.expired || 0, fill: "hsl(var(--chart-2))" },
-      { name: "Revoked", value: counts.revoked || 0, fill: "hsl(var(--chart-3))" },
+      { name: "Active", value: counts.active || 0, fill: "#22c55e" }, // Green
+      { name: "Expired", value: counts.expired || 0, fill: "#ef4444" }, // Red
+      { name: "Revoked", value: counts.revoked || 0, fill: "#dc2626" }, // Dark red
     ].filter(item => item.value > 0);
   }, [passes]);
 
@@ -70,6 +70,8 @@ export function PassesStatusPieChart() {
             innerRadius={60}
             strokeWidth={5}
             activeIndex={0}
+            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            labelLine={false}
             activeShape={({
                 outerRadius = 0,
                 ...props
