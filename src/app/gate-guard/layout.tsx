@@ -1,26 +1,18 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Guardian Gate Guard',
-  description: 'Verify vehicle passes by scanning QR codes or entering plate numbers',
+  title: 'Guardian Gate - Gate Guard',
+  description: 'Verify vehicle passes offline',
   manifest: '/manifest.json',
   themeColor: '#22c55e',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Gate Guard',
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  icons: {
-    icon: '/icon-192.png',
-    apple: '/icon-192.png',
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
   },
 };
 
@@ -29,5 +21,18 @@ export default function GateGuardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#22c55e" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Gate Guard" />
+      </head>
+      <body className={inter.className}>
+        {children}
+      </body>
+    </html>
+  );
 }
