@@ -23,23 +23,16 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 
-const navItems = [
-  { href: "/admin/dashboard/generate", label: "Generate Pass", icon: PlusCircle },
-  { href: "/admin/dashboard/records", label: "All Pass Records", icon: ListOrdered },
-  { href: "/admin/dashboard/search", label: "Pass Search", icon: Search },
-  { href: "/admin/dashboard/statistics", label: "Pass Statistics", icon: BarChart2 },
-  {
-    href: "/admin/dashboard/users",
-    label: "Manage Users",
-    icon: Users,
-    roles: ["admin", "owner"],
-  },
+const dashboardItems = [
+  { href: "/admin/dashboard/records", label: "Records", icon: ListOrdered },
+  { href: "/admin/dashboard/search", label: "Search Pass", icon: Search },
+  { href: "/admin/dashboard/statistics", label: "Statistics", icon: BarChart2 },
 ];
 
 export default function SidebarNav() {
   const pathname = usePathname();
   const { user, handleSignOut } = useAuth();
-  const [isOpen, setIsOpen] = useState(true);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(true);
 
   const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -65,33 +58,44 @@ export default function SidebarNav() {
       <nav className="flex-1 space-y-1 p-4">
         <Link href="/verifier">
           <button
-            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted`}
+            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium ${
+              pathname === '/verifier' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
           >
             <ShieldAlert className="h-4 w-4" />
             <span>Verifier</span>
           </button>
         </Link>
 
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
+        <Link href="/admin/dashboard/generate">
+          <button
+            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium ${
+              pathname === '/admin/dashboard/generate' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Generate</span>
+          </button>
+        </Link>
+
+        <Collapsible open={isDashboardOpen} onOpenChange={setIsDashboardOpen} className="space-y-2">
           <CollapsibleTrigger asChild>
              <Button variant="ghost" className="w-full justify-between">
                 <div className="flex items-center gap-3">
                     <LayoutDashboard className="h-4 w-4" />
-                    <span>Admin Dashboard</span>
+                    <span>Dashboard</span>
                 </div>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 transition-transform", isDashboardOpen && "rotate-180")} />
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-1 pl-4">
-            {navItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
-                const linkContent = (
+            {dashboardItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
                    <Link key={item.href} href={item.href}>
                     <button
                       className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 ${
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted"
+                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                       }`}
                     >
                       <item.icon className="h-4 w-4" />
@@ -99,19 +103,27 @@ export default function SidebarNav() {
                     </button>
                   </Link>
                 );
-
-                if (item.roles) {
-                  return <RoleGate key={item.href} allowedRoles={item.roles as any}>{linkContent}</RoleGate>;
-                }
-                return linkContent;
             })}
           </CollapsibleContent>
         </Collapsible>
 
+        <RoleGate allowedRoles={["admin", "owner"]}>
+          <Link href="/admin/dashboard/users">
+            <button
+              className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium ${
+                pathname === '/admin/dashboard/users' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Manage Users</span>
+            </button>
+          </Link>
+        </RoleGate>
+
         <Link href="/share">
           <button
-            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted ${
-              pathname === '/share' ? 'bg-primary text-primary-foreground' : ''
+            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium ${
+              pathname === '/share' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
           >
             <Share2 className="h-4 w-4" />
