@@ -1,15 +1,16 @@
-﻿"use client";
+"use client";
 
 import { type ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LogOut, Menu, X, ChevronDown } from "lucide-react";
+import { ShieldCheck, LogOut, Menu, X, ChevronDown, Share2 } from "lucide-react";
 import { NAV_LINKS } from "@/lib/constants";
 import { useAuth } from "@/hooks/use-auth";
 import AuthGate from "@/components/auth/auth-gate";
 import RoleGate from "@/components/auth/role-gate";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, handleSignOut, role } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(true);
+  const { toast } = useToast();
 
   const visibleNavLinks = NAV_LINKS.filter(link => {
     if (link.href === "/admin/dashboard/users") {
@@ -32,6 +34,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
     return true;
   });
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/gate-guard`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Guardian Gate Guard',
+          text: 'Access the gate guard verification page.',
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        toast({
+          title: "Link Copied!",
+          description: "The Gate Guard page link has been copied to your clipboard.",
+        });
+      });
+    }
+  };
 
   return (
     <AuthGate>
@@ -43,14 +67,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <ShieldCheck className="h-6 w-6 text-primary flex-shrink-0" />
                 <span className="font-headline text-lg font-bold whitespace-nowrap">Guardian Gate</span>
               </div>
-              
+
               <nav className="flex-1 space-y-1 overflow-y-auto p-4">
                 {visibleNavLinks.map((link) => {
                   const Icon = link.icon;
-                  
+
+                  if (link.href === '/gate-guard') {
+                    return (
+                      <Button
+                        key={link.label}
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={handleShare}
+                      >
+                        <Share2 className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{link.label}</span>
+                      </Button>
+                    );
+                  }
+
                   if (link.submenu) {
                     const isAnySubmenuActive = link.submenu.some(sub => pathname === sub.href);
-                    
+
                     return (
                       <div key={link.label}>
                         <Button
@@ -62,13 +100,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           <span className="whitespace-nowrap flex-1 text-left">{link.label}</span>
                           <ChevronDown className={cn("h-4 w-4 transition-transform", dashboardOpen && "rotate-180")} />
                         </Button>
-                        
+
                         {dashboardOpen && (
                           <div className="ml-6 mt-1 space-y-1">
                             {link.submenu.map((sublink) => {
                               const SubIcon = sublink.icon;
                               const isActive = pathname === sublink.href;
-                              
+
                               return (
                                 <Link key={sublink.href} href={sublink.href}>
                                   <Button
@@ -87,9 +125,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       </div>
                     );
                   }
-                  
+
                   const isActive = pathname === link.href;
-                  
+
                   return (
                     <Link key={link.href} href={link.href}>
                       <Button
@@ -117,7 +155,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <h2 className="text-lg font-semibold">Dashboard</h2>
                 </div>
               </div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -152,7 +190,3 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </AuthGate>
   );
 }
-
-
-
-
