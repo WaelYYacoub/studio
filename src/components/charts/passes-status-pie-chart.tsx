@@ -4,10 +4,10 @@ import { useEffect, useRef, useMemo } from "react";
 import { CardDescription } from "../ui/card";
 import { useData } from "@/context/data-provider";
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// Register Chart.js components
 if (typeof window !== 'undefined') {
-  Chart.register(...registerables);
+  Chart.register(...registerables, ChartDataLabels);
 }
 
 export function PassesStatusPieChart() {
@@ -20,7 +20,6 @@ export function PassesStatusPieChart() {
     
     const now = new Date();
     
-    // Calculate actual status for each pass
     const counts = passes.reduce(
       (acc, pass) => {
         let actualStatus: string;
@@ -50,7 +49,6 @@ export function PassesStatusPieChart() {
   useEffect(() => {
     if (!chartRef.current || loading) return;
 
-    // Destroy previous chart
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
@@ -64,11 +62,7 @@ export function PassesStatusPieChart() {
         labels: chartData.labels,
         datasets: [{
           data: chartData.data,
-          backgroundColor: [
-            '#22c55e', // Green for Active
-            '#ef4444', // Red for Expired
-            '#dc2626'  // Dark Red for Revoked
-          ],
+          backgroundColor: ['#22c55e', '#ef4444', '#dc2626'],
           borderColor: '#ffffff',
           borderWidth: 3,
           hoverOffset: 15
@@ -82,9 +76,7 @@ export function PassesStatusPieChart() {
             position: 'bottom',
             labels: {
               padding: 15,
-              font: {
-                size: 13
-              },
+              font: { size: 13 },
               usePointStyle: true,
               pointStyle: 'circle'
             }
@@ -126,11 +118,11 @@ export function PassesStatusPieChart() {
   }, [chartData, loading]);
 
   if (loading) {
-    return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
+    return <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
 
   if (!chartData.data.length || chartData.data.every(d => d === 0)) {
-    return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
+    return <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
   }
 
   return (
@@ -138,7 +130,7 @@ export function PassesStatusPieChart() {
       <CardDescription>
         Total of {totalPasses} passes in the system
       </CardDescription>
-      <div className="h-[250px] w-full relative">
+      <div className="h-[300px] w-full relative">
         <canvas ref={chartRef} />
       </div>
     </>

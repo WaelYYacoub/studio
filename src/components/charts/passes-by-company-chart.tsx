@@ -61,10 +61,13 @@ export function PassesByCompanyChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 30
+          }
+        },
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: function(context) {
@@ -75,26 +78,18 @@ export function PassesByCompanyChart() {
         },
         scales: {
           x: {
-            grid: {
-              display: false
-            },
+            grid: { display: false },
             ticks: {
-              font: {
-                size: 10
-              },
+              font: { size: 10 },
               maxRotation: 45,
               minRotation: 45
             }
           },
           y: {
             beginAtZero: true,
-            grid: {
-              color: '#f1f1f1'
-            },
+            grid: { color: '#f1f1f1' },
             ticks: {
-              font: {
-                size: 11
-              },
+              font: { size: 11 },
               stepSize: 1
             }
           }
@@ -113,7 +108,7 @@ export function PassesByCompanyChart() {
                 ctx.font = 'bold 12px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                ctx.fillText(data.toString(), bar.x, bar.y - 5);
+                ctx.fillText(data.toString(), bar.x, bar.y - 8);
               }
             });
           });
@@ -131,17 +126,17 @@ export function PassesByCompanyChart() {
   }, [chartData, loading]);
 
   if (loading) {
-    return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
+    return <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">Loading chart data...</div>;
   }
 
   if (!chartData.labels.length) {
-    return <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
+    return <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">No pass data available.</div>;
   }
 
   return (
     <>
       <CardDescription>Top 10 companies by passes issued</CardDescription>
-      <div className="h-[250px] w-full relative">
+      <div className="h-[350px] w-full relative">
         <canvas ref={chartRef} />
       </div>
     </>

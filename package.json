@@ -39,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "apexcharts": "^5.3.5",
     "chart.js": "^4.5.0",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
