@@ -135,11 +135,26 @@ export function PassesByMonthChart() {
             meta.data.forEach((bar: any, index) => {
               const data = dataset.data[index] as number;
               if (data > 0) {
-                ctx.fillStyle = '#ffffff'; // White color for all labels
-                ctx.font = 'bold 12px sans-serif';
+                // Add shadow for better visibility
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                ctx.fillStyle = '#ffffff'; // Force white
+                ctx.font = 'bold 14px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-                ctx.fillText(data.toString(), bar.x, bar.y - 8);
+                ctx.textBaseline = 'middle';
+                
+                // Draw text inside the bar
+                const barHeight = bar.base - bar.y;
+                if (barHeight > 20) { // Only show if bar is tall enough
+                  ctx.fillText(data.toString(), bar.x, bar.y + (barHeight / 2));
+                }
+                
+                // Reset shadow
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
               }
             });
           });
