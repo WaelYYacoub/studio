@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -32,29 +32,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       if (firebaseUser) {
-        const userDocRef = doc(db, "users", firebaseUser.uid).withConverter(userConverter);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
+        try {
+          // ✅ Wrap Firebase call in try-catch for offline handling
+          const userDocRef = doc(db, "users", firebaseUser.uid).withConverter(userConverter);
+          const userDocSnap = await getDoc(userDocRef);
           
-          if (userData.role === 'pending' || userData.role === 'rejected') {
-             await signOut(auth);
-             setUser(null);
-             setRole(null);
-             router.replace("/login?pending=1");
-          } else {
-            setUser(userData);
-            setRole(userData.role);
-            const currentPath = window.location.pathname;
-            if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/') {
-                router.replace("/admin/dashboard");
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            
+            if (userData.role === 'pending' || userData.role === 'rejected') {
+               await signOut(auth);
+               setUser(null);
+               setRole(null);
+               router.replace("/login?pending=1");
+            } else {
+              setUser(userData);
+              setRole(userData.role);
+              const currentPath = window.location.pathname;
+              if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/') {
+                  router.replace("/admin/dashboard");
+              }
             }
+          } else {
+              // No user profile found, sign them out.
+              await signOut(auth);
+              setUser(null);
+              setRole(null);
           }
-        } else {
-            // No user profile found, sign them out.
-            await signOut(auth);
-            setUser(null);
-            setRole(null);
+        } catch (error: any) {
+          // ✅ Handle offline gracefully - don't crash the app
+          console.log('[Auth] Offline or error fetching user profile:', error.message);
+          // Keep user authenticated but with null role if offline
+          // This allows gate-guard page to work offline
+          setUser(null);
+          setRole(null);
         }
       } else {
         setUser(null);
