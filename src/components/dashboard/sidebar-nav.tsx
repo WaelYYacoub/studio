@@ -13,6 +13,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   ShieldAlert,
+  Share2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "../ui/button";
@@ -39,7 +40,7 @@ export default function SidebarNav() {
   const pathname = usePathname();
   const { user, handleSignOut } = useAuth();
   const [isOpen, setIsOpen] = useState(true);
-  
+
   const getInitials = (name: string) => {
     const names = name.split(' ');
     if (names.length > 1) {
@@ -106,6 +107,17 @@ export default function SidebarNav() {
             })}
           </CollapsibleContent>
         </Collapsible>
+
+        <Link href="/share">
+          <button
+            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium text-muted-foreground hover:text-foreground hover:bg-muted ${
+              pathname === '/share' ? 'bg-primary text-primary-foreground' : ''
+            }`}
+          >
+            <Share2 className="h-4 w-4" />
+            <span>Share Verifier</span>
+          </button>
+        </Link>
       </nav>
       <div className="p-4 border-t mt-auto">
           <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start">
