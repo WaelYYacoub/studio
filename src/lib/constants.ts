@@ -1,11 +1,12 @@
-﻿import { 
-  LayoutDashboard, 
-  ListOrdered, 
-  CirclePlus, 
-  Search, 
-  ChartNoAxesColumn, 
-  Users, 
-  ScanLine 
+import {
+  LayoutDashboard,
+  ListOrdered,
+  CirclePlus,
+  Search,
+  ChartNoAxesColumn,
+  Users,
+  ScanLine,
+  Share2
 } from 'lucide-react';
 
 export const NAV_LINKS = [
@@ -13,6 +14,11 @@ export const NAV_LINKS = [
     label: 'Verifier',
     href: '/verifier',
     icon: ScanLine,
+  },
+  {
+    label: 'Gate Guard',
+    href: '/gate-guard',
+    icon: Share2,
   },
   {
     label: 'Generate',
