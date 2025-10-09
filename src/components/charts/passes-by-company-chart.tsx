@@ -104,7 +104,7 @@ export function PassesByCompanyChart() {
             meta.data.forEach((bar: any, index) => {
               const data = dataset.data[index] as number;
               if (data > 0) {
-                ctx.fillStyle = '#22c55e';
+                ctx.fillStyle = '#ffffff'; // White color for labels
                 ctx.font = 'bold 12px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';

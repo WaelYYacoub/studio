@@ -62,7 +62,7 @@ export function PassesStatusPieChart() {
         labels: chartData.labels,
         datasets: [{
           data: chartData.data,
-          backgroundColor: ['#22c55e', '#ef4444', '#dc2626'],
+          backgroundColor: ['#22c55e', '#ef4444', '#eab308'], // Green, Red, Yellow
           borderColor: '#ffffff',
           borderWidth: 3,
           hoverOffset: 15

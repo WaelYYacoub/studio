@@ -21,6 +21,7 @@ export function PassesByMonthChart() {
       month: format(new Date(0, i), "MMM"),
       active: 0,
       expired: 0,
+      revoked: 0
     }));
 
     passes.forEach((pass) => {
@@ -28,19 +29,12 @@ export function PassesByMonthChart() {
       if (isThisYear(createdAtDate)) {
         const monthIndex = getMonth(createdAtDate);
         
-        let actualStatus: string;
         if (pass.status === "revoked") {
-          actualStatus = "expired";
+          monthlyData[monthIndex].revoked += 1;
         } else if (pass.expiresAt.toDate() < now) {
-          actualStatus = "expired";
-        } else {
-          actualStatus = "active";
-        }
-        
-        if (actualStatus === "active") {
-          monthlyData[monthIndex].active += 1;
-        } else {
           monthlyData[monthIndex].expired += 1;
+        } else {
+          monthlyData[monthIndex].active += 1;
         }
       }
     });
@@ -62,6 +56,15 @@ export function PassesByMonthChart() {
           data: monthlyData.map(d => d.expired),
           backgroundColor: '#ef4444',
           borderColor: '#dc2626',
+          borderWidth: 2,
+          borderRadius: 6,
+          barThickness: 30
+        },
+        {
+          label: 'Revoked',
+          data: monthlyData.map(d => d.revoked),
+          backgroundColor: '#eab308',
+          borderColor: '#ca8a04',
           borderWidth: 2,
           borderRadius: 6,
           barThickness: 30
@@ -132,7 +135,7 @@ export function PassesByMonthChart() {
             meta.data.forEach((bar: any, index) => {
               const data = dataset.data[index] as number;
               if (data > 0) {
-                ctx.fillStyle = dataset.backgroundColor as string;
+                ctx.fillStyle = '#ffffff'; // White color for all labels
                 ctx.font = 'bold 12px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
