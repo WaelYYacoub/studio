@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,9 +12,31 @@ interface PassDetailsProps {
   isAdminSearch?: boolean;
 }
 
+// Helper function to convert various date formats to JavaScript Date
+function getDateFromField(dateField: any): Date {
+  // If it's a Firebase Timestamp with toDate method
+  if (dateField && typeof dateField.toDate === 'function') {
+    return dateField.toDate();
+  }
+  // If it's already a Date object
+  if (dateField instanceof Date) {
+    return dateField;
+  }
+  // If it's an ISO string
+  if (typeof dateField === 'string') {
+    return new Date(dateField);
+  }
+  // If it's a timestamp number
+  if (typeof dateField === 'number') {
+    return new Date(dateField);
+  }
+  // Fallback to current date
+  return new Date();
+}
+
 export default function PassDetails({ pass, isAdminSearch = false }: PassDetailsProps) {
   const isPassObject = pass !== "not_found";
-  const isExpired = isPassObject && pass.expiresAt.toDate() < new Date();
+  const isExpired = isPassObject && getDateFromField(pass.expiresAt) < new Date();
   const isAllowed = isPassObject && pass.status === "active" && !isExpired;
 
 useEffect(() => {
@@ -159,7 +180,7 @@ useEffect(() => {
             </div>
              <div className="flex justify-between">
                 <span className="font-semibold text-muted-foreground">Expires At:</span>
-                <span>{format(pass.expiresAt.toDate(), "PPP p")}</span>
+                <span>{format(getDateFromField(pass.expiresAt), "PPP p")}</span>
             </div>
         </div>
       </CardContent>
