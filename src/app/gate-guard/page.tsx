@@ -34,7 +34,7 @@ export default function GateGuardPage() {
   // Initialize sync manager and check for local data
   useEffect(() => {
     // Check if we have local data
-    hasLocalData().then(has Data => {
+    hasLocalData().then(hasData => {
       setHasData(hasData);
       if (!hasData && navigator.onLine) {
         // No local data and we're online, perform initial sync
