@@ -16,11 +16,6 @@ export const NAV_LINKS = [
     icon: ScanLine,
   },
   {
-    label: 'Gate Guard',
-    href: '/gate-guard',
-    icon: Share2,
-  },
-  {
     label: 'Generate',
     href: '/admin/dashboard/generate',
     icon: CirclePlus,
@@ -50,6 +45,11 @@ export const NAV_LINKS = [
     label: 'Manage Users',
     href: '/admin/dashboard/users',
     icon: Users,
+  },
+  {
+    label: 'Gate Guard',
+    href: '/gate-guard',
+    icon: Share2,
   },
 ];
 
