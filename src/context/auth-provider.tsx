@@ -31,12 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
-      if (firebaseUser) {
-        try {
-          // ✅ Wrap Firebase call in try-catch for offline handling
+      try {
+        if (firebaseUser) {
           const userDocRef = doc(db, "users", firebaseUser.uid).withConverter(userConverter);
           const userDocSnap = await getDoc(userDocRef);
-          
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             
@@ -54,20 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
           } else {
-              // No user profile found, sign them out.
               await signOut(auth);
               setUser(null);
               setRole(null);
           }
-        } catch (error: any) {
-          // ✅ Handle offline gracefully - don't crash the app
-          console.log('[Auth] Offline or error fetching user profile:', error.message);
-          // Keep user authenticated but with null role if offline
-          // This allows gate-guard page to work offline
+        } else {
           setUser(null);
           setRole(null);
         }
-      } else {
+      } catch (error: any) {
+        console.log('[Auth] Offline - skipping Firebase calls');
         setUser(null);
         setRole(null);
       }
@@ -89,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-
       const userProfile: Omit<AppUser, 'uid'> = {
         email,
         fullName,
@@ -107,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (isFirstUser) {
         await setDoc(metaRef, { ownerSet: true }, { merge: true });
-        // Manually set user state for the owner to bypass onAuthStateChanged race condition
         setUser({ uid, ...userProfile } as AppUser);
         setRole(newUserRole);
       }
