@@ -37,7 +37,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      // ✅ Wrap Firestore listeners in try-catch
       // Real-time listener for passes
       const passesQuery = query(
         collection(db, "passes"),
@@ -68,7 +67,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (updateCount > 0) {
             try {
               await batch.commit();
-              console.log(\Auto-updated \ expired pass(es) in Firestore\);
+              console.log('Auto-updated ' + updateCount + ' expired pass(es) in Firestore');
             } catch (error) {
               console.error("Failed to update expired passes:", error);
             }
@@ -78,10 +77,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         },
         (error) => {
-          // ✅ Handle offline error gracefully
           console.log('[Data] Offline or error fetching passes:', error.message);
           setLoading(false);
-          // Keep existing cached passes if any
         }
       );
 
@@ -98,9 +95,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setUsers(usersData);
         },
         (error) => {
-          // ✅ Handle offline error gracefully
           console.log('[Data] Offline or error fetching users:', error.message);
-          // Keep existing cached users if any
         }
       );
 
@@ -110,7 +105,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         unsubscribeUsers();
       };
     } catch (error: any) {
-      // ✅ Catch any synchronous errors setting up listeners
       console.log('[Data] Error setting up Firestore listeners (offline):', error.message);
       setLoading(false);
     }
