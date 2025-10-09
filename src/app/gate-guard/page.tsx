@@ -1,7 +1,7 @@
 "use client";
 
-import { ShieldCheck, QrCode, Download } from 'lucide-react';
-import ManualSearch from '@/components/verifier/manual-search';
+import { ShieldCheck, QrCode, Download, WifiOff, Wifi, RefreshCw } from 'lucide-react';
+import ManualSearch from '@/components/verifier/manual-search-offline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import QrScanner from '@/components/verifier/qr-scanner';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firestore';
+import { getPassById } from '@/lib/local-db';
+import { initializeSyncManager, syncPassesFromFirebase, hasLocalData } from '@/lib/sync-manager';
 
 export default function GateGuardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -24,8 +24,50 @@ export default function GateGuardPage() {
   const [isValidating, setIsValidating] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
+  
+  // Network and sync state
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncCount, setLastSyncCount] = useState(0);
+  const [hasData, setHasData] = useState(false);
 
-  // Register service worker on component mount
+  // Initialize sync manager and check for local data
+  useEffect(() => {
+    // Check if we have local data
+    hasLocalData().then(has Data => {
+      setHasData(hasData);
+      if (!hasData && navigator.onLine) {
+        // No local data and we're online, perform initial sync
+        handleManualSync();
+      }
+    });
+
+    // Initialize automatic syncing when online/offline
+    initializeSyncManager((result) => {
+      if (result.success) {
+        setLastSyncCount(result.passCount);
+        setHasData(true);
+      }
+      setIsSyncing(false);
+    });
+
+    // Set initial online status
+    setIsOnline(navigator.onLine);
+
+    // Listen for online/offline events to update UI
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Register service worker for PWA functionality
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -67,6 +109,26 @@ export default function GateGuardPage() {
     setShowInstallButton(false);
   };
 
+  const handleManualSync = async () => {
+    if (!navigator.onLine) {
+      alert('Cannot sync while offline. Please connect to the internet and try again.');
+      return;
+    }
+
+    setIsSyncing(true);
+    const result = await syncPassesFromFirebase();
+    
+    if (result.success) {
+      setLastSyncCount(result.passCount);
+      setHasData(true);
+      alert(`Successfully synced ${result.passCount} passes from the server.`);
+    } else {
+      alert(`Sync failed: ${result.error}`);
+    }
+    
+    setIsSyncing(false);
+  };
+
   const handleScanSuccess = async (decodedText: string) => {
     if (isValidating || scannedPass) return;
 
@@ -75,6 +137,7 @@ export default function GateGuardPage() {
     setIsScannerOpen(false);
 
     try {
+      // Parse QR data
       const qrData = JSON.parse(decodedText);
       console.log("Parsed QR data:", qrData);
 
@@ -82,22 +145,22 @@ export default function GateGuardPage() {
         throw new Error("Invalid QR code format");
       }
 
-      const passRef = doc(db, 'passes', qrData.pid);
-      const passSnap = await getDoc(passRef);
+      // Always try local database first, even if online
+      console.log("Searching local database for pass:", qrData.pid);
+      const passData = await getPassById(qrData.pid);
 
-      if (!passSnap.exists()) {
-        throw new Error("Pass not found");
+      if (!passData) {
+        throw new Error("Pass not found in local database");
       }
 
-      const passData = passSnap.data();
-      console.log("Pass data from Firestore:", passData);
-
+      // Check QR expiration
       const now = Date.now() / 1000;
       if (qrData.exp && qrData.exp < now) {
         passData.expired = true;
       }
 
-      setScannedPass({ id: passSnap.id, ...passData });
+      // Show result
+      setScannedPass({ id: qrData.pid, ...passData });
     } catch (error: any) {
       console.error("Validation error:", error);
       alert(`Scan failed: ${error.message}`);
@@ -114,12 +177,42 @@ export default function GateGuardPage() {
             <ShieldCheck className="h-7 w-7 text-primary" />
             <span className="font-headline text-xl font-bold">Guardian Gate Guard</span>
           </div>
-          {showInstallButton && (
-            <Button onClick={handleInstallClick} size="sm" variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Install App
-            </Button>
-          )}
+          
+          <div className="flex items-center gap-2">
+            {/* Network status indicator */}
+            {isOnline ? (
+              <div className="flex items-center gap-1 text-green-600 text-sm">
+                <Wifi className="h-4 w-4" />
+                <span className="hidden sm:inline">Online</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-orange-600 text-sm">
+                <WifiOff className="h-4 w-4" />
+                <span className="hidden sm:inline">Offline</span>
+              </div>
+            )}
+
+            {/* Sync button */}
+            {isOnline && (
+              <Button 
+                onClick={handleManualSync} 
+                size="sm" 
+                variant="outline"
+                disabled={isSyncing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Sync</span>
+              </Button>
+            )}
+
+            {/* Install button */}
+            {showInstallButton && (
+              <Button onClick={handleInstallClick} size="sm" variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Install</span>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -130,8 +223,19 @@ export default function GateGuardPage() {
             <p className="text-muted-foreground mt-2">
               Enter a vehicle's plate number or scan a QR code to verify its access status.
             </p>
+            {!hasData && (
+              <p className="text-orange-600 mt-2 text-sm">
+                No passes stored locally. {isOnline ? 'Click Sync to download pass database.' : 'Connect to internet to download pass database.'}
+              </p>
+            )}
+            {hasData && lastSyncCount > 0 && (
+              <p className="text-green-600 mt-2 text-sm">
+                {lastSyncCount} passes available offline
+              </p>
+            )}
           </div>
 
+          {/* Show scan result in dialog */}
           <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
