@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 
 const dashboardItems = [
   { href: "/admin/dashboard/records", label: "Records", icon: ListOrdered },
@@ -33,6 +34,7 @@ export default function SidebarNav() {
   const pathname = usePathname();
   const { user, handleSignOut } = useAuth();
   const [isDashboardOpen, setIsDashboardOpen] = useState(true);
+  const { toast } = useToast();
 
   const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -41,6 +43,28 @@ export default function SidebarNav() {
     }
     return name.substring(0, 2).toUpperCase();
   }
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/gate-guard`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Guardian Gate Guard',
+          text: 'Access the gate guard verification page.',
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        toast({
+          title: "Link Copied!",
+          description: "The Gate Guard page link has been copied to your clipboard.",
+        });
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -120,16 +144,14 @@ export default function SidebarNav() {
           </Link>
         </RoleGate>
 
-        <Link href="/share">
-          <button
-            className={`w-full text-left rounded-md px-3 py-2 transition-colors flex items-center gap-3 font-medium ${
-              pathname === '/share' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-            }`}
-          >
-            <Share2 className="h-4 w-4" />
-            <span>Share Verifier</span>
-          </button>
-        </Link>
+        <Button
+          variant="ghost"
+          onClick={handleShare}
+          className="w-full justify-start font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+        >
+          <Share2 className="h-4 w-4 mr-3" />
+          <span>Gate Guard</span>
+        </Button>
       </nav>
       <div className="p-4 border-t mt-auto">
           <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start">
