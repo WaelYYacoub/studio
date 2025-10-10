@@ -1,5 +1,5 @@
-"use client";
-
+﻿"use client";
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary';
 import { ShieldCheck, QrCode, Download, WifiOff, Wifi, RefreshCw } from 'lucide-react';
 import ManualSearch from '@/components/verifier/manual-search-offline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,30 +19,33 @@ import { getPassById } from '@/lib/local-db';
 import { initializeSyncManager, syncPassesFromFirebase, hasLocalData } from '@/lib/sync-manager';
 
 export default function GateGuardPage() {
+  return (
+    <ErrorBoundary>
+      <GateGuardContent />
+    </ErrorBoundary>
+  );
+}
+
+function GateGuardContent() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannedPass, setScannedPass] = useState<any>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
-  
-  // Network and sync state
+
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncCount, setLastSyncCount] = useState(0);
   const [hasData, setHasData] = useState(false);
 
-  // Initialize sync manager and check for local data
   useEffect(() => {
-    // Check if we have local data
     hasLocalData().then(hasData => {
       setHasData(hasData);
       if (!hasData && navigator.onLine) {
-        // No local data and we're online, perform initial sync
         handleManualSync();
       }
     });
 
-    // Initialize automatic syncing when online/offline
     initializeSyncManager((result) => {
       if (result.success) {
         setLastSyncCount(result.passCount);
@@ -51,10 +54,7 @@ export default function GateGuardPage() {
       setIsSyncing(false);
     });
 
-    // Set initial online status
     setIsOnline(navigator.onLine);
-
-    // Listen for online/offline events to update UI
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -67,21 +67,15 @@ export default function GateGuardPage() {
     };
   }, []);
 
-  // Register service worker for PWA functionality
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('Service Worker registered successfully:', registration);
-          })
-          .catch((error) => {
-            console.log('Service Worker registration failed:', error);
-          });
+          .then((registration) => console.log('Service Worker registered:', registration))
+          .catch((error) => console.log('Service Worker registration failed:', error));
       });
     }
 
-    // Listen for install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -89,22 +83,14 @@ export default function GateGuardPage() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    }
-    
+    if (outcome === 'accepted') console.log('User accepted the install prompt');
     setDeferredPrompt(null);
     setShowInstallButton(false);
   };
@@ -114,10 +100,8 @@ export default function GateGuardPage() {
       alert('Cannot sync while offline. Please connect to the internet and try again.');
       return;
     }
-
     setIsSyncing(true);
     const result = await syncPassesFromFirebase();
-    
     if (result.success) {
       setLastSyncCount(result.passCount);
       setHasData(true);
@@ -125,41 +109,26 @@ export default function GateGuardPage() {
     } else {
       alert(`Sync failed: ${result.error}`);
     }
-    
     setIsSyncing(false);
   };
 
   const handleScanSuccess = async (decodedText: string) => {
     if (isValidating || scannedPass) return;
-
     console.log("Processing scanned QR:", decodedText);
     setIsValidating(true);
     setIsScannerOpen(false);
 
     try {
-      // Parse QR data
       const qrData = JSON.parse(decodedText);
       console.log("Parsed QR data:", qrData);
-
-      if (!qrData.pid || !qrData.v) {
-        throw new Error("Invalid QR code format");
-      }
-
-      // Always try local database first, even if online
+      if (!qrData.pid || !qrData.v) throw new Error("Invalid QR code format");
+      
       console.log("Searching local database for pass:", qrData.pid);
       const passData = await getPassById(qrData.pid);
+      if (!passData) throw new Error("Pass not found in local database");
 
-      if (!passData) {
-        throw new Error("Pass not found in local database");
-      }
-
-      // Check QR expiration
       const now = Date.now() / 1000;
-      if (qrData.exp && qrData.exp < now) {
-        passData.expired = true;
-      }
-
-      // Show result
+      if (qrData.exp && qrData.exp < now) passData.expired = true;
       setScannedPass({ id: qrData.pid, ...passData });
     } catch (error: any) {
       console.error("Validation error:", error);
@@ -177,9 +146,7 @@ export default function GateGuardPage() {
             <ShieldCheck className="h-7 w-7 text-primary" />
             <span className="font-headline text-xl font-bold">Guardian Gate Guard</span>
           </div>
-          
           <div className="flex items-center gap-2">
-            {/* Network status indicator */}
             {isOnline ? (
               <div className="flex items-center gap-1 text-green-600 text-sm">
                 <Wifi className="h-4 w-4" />
@@ -191,21 +158,12 @@ export default function GateGuardPage() {
                 <span className="hidden sm:inline">Offline</span>
               </div>
             )}
-
-            {/* Sync button */}
             {isOnline && (
-              <Button 
-                onClick={handleManualSync} 
-                size="sm" 
-                variant="outline"
-                disabled={isSyncing}
-              >
+              <Button onClick={handleManualSync} size="sm" variant="outline" disabled={isSyncing}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Sync</span>
               </Button>
             )}
-
-            {/* Install button */}
             {showInstallButton && (
               <Button onClick={handleInstallClick} size="sm" variant="outline">
                 <Download className="h-4 w-4 mr-2" />
@@ -215,7 +173,6 @@ export default function GateGuardPage() {
           </div>
         </div>
       </header>
-
       <main className="container mx-auto p-4 md:p-8">
         <div className="mx-auto max-w-2xl space-y-8">
           <div className="text-center">
@@ -229,13 +186,9 @@ export default function GateGuardPage() {
               </p>
             )}
             {hasData && lastSyncCount > 0 && (
-              <p className="text-green-600 mt-2 text-sm">
-                {lastSyncCount} passes available offline
-              </p>
+              <p className="text-green-600 mt-2 text-sm">{lastSyncCount} passes available offline</p>
             )}
           </div>
-
-          {/* Show scan result in dialog */}
           <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
@@ -245,7 +198,6 @@ export default function GateGuardPage() {
               {scannedPass && <PassDetails pass={scannedPass} />}
             </DialogContent>
           </Dialog>
-
           <Card>
             <CardHeader>
               <CardTitle>Manual Plate Search</CardTitle>
@@ -255,7 +207,6 @@ export default function GateGuardPage() {
               <ManualSearch />
             </CardContent>
           </Card>
-
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -264,7 +215,6 @@ export default function GateGuardPage() {
               <span className="bg-secondary/30 px-2 text-muted-foreground">Or</span>
             </div>
           </div>
-
           <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
             <DialogTrigger asChild>
               <Button size="lg" className="w-full">
@@ -277,9 +227,7 @@ export default function GateGuardPage() {
                 <DialogTitle className="flex items-center gap-2">
                   <QrCode className="h-5 w-5" /> Scan QR Code
                 </DialogTitle>
-                <DialogDescription>
-                  Use your device's camera to scan the pass QR code.
-                </DialogDescription>
+                <DialogDescription>Use your device's camera to scan the pass QR code.</DialogDescription>
               </DialogHeader>
               {isValidating ? (
                 <div className="text-center py-8">Validating pass...</div>
