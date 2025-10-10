@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, getDocs, collection, query, where, limit } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, userConverter } from "@/lib/firestore";
 import type { AppUser, Role } from "@/types";
 
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setRole(null);
           }
         } catch (error: any) {
-          console.log('[Auth] Offline or error fetching user profile:', error.message);
+          console.log('[Auth] Offline - working in offline mode:', error.message);
           setUser(null);
           setRole(null);
         }
@@ -83,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
-
 
       const userProfile: Omit<AppUser, 'uid'> = {
         email,
