@@ -11,6 +11,7 @@ export default function QrScanner({ onScanSuccess, onScanError }: QrScannerProps
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const hasStoppedRef = useRef(false); // Track if already stopped
   const qrCodeRegionId = "qr-reader";
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function QrScanner({ onScanSuccess, onScanError }: QrScannerProps
       try {
         setIsScanning(true);
         setError(null);
+        hasStoppedRef.current = false; // Reset flag
         
         // Initialize scanner
         scannerRef.current = new Html5Qrcode(qrCodeRegionId);
@@ -31,6 +33,15 @@ export default function QrScanner({ onScanSuccess, onScanError }: QrScannerProps
           },
           (decodedText) => {
             console.log("QR Code scanned:", decodedText);
+            
+            // Stop scanner immediately after successful scan
+            if (scannerRef.current && !hasStoppedRef.current) {
+              hasStoppedRef.current = true;
+              scannerRef.current.stop()
+                .then(() => console.log("Scanner stopped after successful scan"))
+                .catch(() => {}); // Ignore errors
+            }
+            
             onScanSuccess(decodedText);
           },
           (errorMessage) => {
@@ -49,19 +60,11 @@ export default function QrScanner({ onScanSuccess, onScanError }: QrScannerProps
 
     // Cleanup on unmount
     return () => {
-      if (scannerRef.current) {
-        try {
-          // Check if scanner is running before trying to stop
-          const state = scannerRef.current.getState();
-          if (state === 2) { // 2 = SCANNING state in html5-qrcode
-            scannerRef.current.stop()
-              .then(() => console.log("Scanner stopped successfully"))
-              .catch((err) => console.log("Scanner stop error (safe to ignore):", err));
-          }
-        } catch (err) {
-          // Scanner might already be stopped or in invalid state - this is fine
-          console.log("Scanner cleanup error (safe to ignore):", err);
-        }
+      if (scannerRef.current && !hasStoppedRef.current) {
+        hasStoppedRef.current = true;
+        scannerRef.current.stop()
+          .then(() => console.log("Scanner stopped on cleanup"))
+          .catch(() => {}); // Silently ignore all stop errors
       }
     };
   }, [onScanSuccess, onScanError]);
