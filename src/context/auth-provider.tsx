@@ -31,10 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
-      try {
-        if (firebaseUser) {
+      if (firebaseUser) {
+        try {
           const userDocRef = doc(db, "users", firebaseUser.uid).withConverter(userConverter);
           const userDocSnap = await getDoc(userDocRef);
+          
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             
@@ -56,12 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(null);
               setRole(null);
           }
-        } else {
+        } catch (error: any) {
+          console.log('[Auth] Offline or error fetching user profile:', error.message);
           setUser(null);
           setRole(null);
         }
-      } catch (error: any) {
-        console.log('[Auth] Offline - skipping Firebase calls');
+      } else {
         setUser(null);
         setRole(null);
       }
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
+
 
       const userProfile: Omit<AppUser, 'uid'> = {
         email,
