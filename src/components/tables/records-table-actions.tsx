@@ -1,5 +1,5 @@
 ﻿"use client";
-import { MoreHorizontal, Ban, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Ban, Trash2, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import RoleGate from "../auth/role-gate";
 import { useState } from "react";
 import PassPreviewDialog from "../forms/pass-preview-dialog";
+import EditPassDialog from "../forms/edit-pass-dialog";
 
 interface RecordsTableActionsProps {
   pass: Pass;
@@ -25,6 +26,7 @@ interface RecordsTableActionsProps {
 export function RecordsTableActions({ pass, actualStatus }: RecordsTableActionsProps) {
   const { toast } = useToast();
   const [showPreview, setShowPreview] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const handleRevoke = async () => {
     if (pass.status === "revoked") return;
@@ -76,6 +78,10 @@ export function RecordsTableActions({ pass, actualStatus }: RecordsTableActionsP
             View Details
           </DropdownMenuItem>
           <RoleGate allowedRoles={["admin", "owner", "user"]}>
+            <DropdownMenuItem onClick={() => setShowEdit(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Pass
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={handleRevoke} 
@@ -92,8 +98,13 @@ export function RecordsTableActions({ pass, actualStatus }: RecordsTableActionsP
           </RoleGate>
         </DropdownMenuContent>
       </DropdownMenu>
+      
       {showPreview && (
         <PassPreviewDialog pass={pass} open={showPreview} onOpenChange={setShowPreview} />
+      )}
+      
+      {showEdit && (
+        <EditPassDialog pass={pass} open={showEdit} onOpenChange={setShowEdit} />
       )}
     </>
   );
