@@ -178,6 +178,25 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
     return new Date(date);
   }
 
+  // ✅ FIX: Determine status color based on pass status and expiry
+  const getStatusColor = (): string => {
+    const isExpired = getPassDate(pass.expiresAt) < new Date();
+    
+    if (pass.status === "active" && !isExpired) {
+      return "text-green-600"; // Active and not expired
+    }
+    if (pass.status === "revoked") {
+      return "text-red-600"; // Revoked
+    }
+    if (pass.status === "expired" || isExpired) {
+      return "text-red-600"; // Expired
+    }
+    if (pass.status === "pending") {
+      return "text-yellow-600"; // Pending
+    }
+    return "text-gray-600"; // Unknown status
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -189,59 +208,59 @@ export default function PassPreviewDialog({ pass, open, onOpenChange }: PassPrev
         </DialogHeader>
 
         <div id="print-area-dialog" ref={printRef} className="py-4">
-             <div className="print-card text-center">
-                 <h2 className="text-2xl font-bold font-headline text-center mb-4">
-                    {pass.plateAlpha} {pass.plateNum}
-                </h2>
-                <div className="details grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 text-sm text-left">
-                    <span className="details-label font-semibold text-muted-foreground">Status:</span>
-                    <span className="details-value status-active font-bold text-green-600 capitalize">{pass.status}</span>
+          <div className="print-card text-center">
+            <h2 className="text-2xl font-bold font-headline text-center mb-4">
+              {pass.plateAlpha} {pass.plateNum}
+            </h2>
+            <div className="details grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 text-sm text-left">
+              <span className="details-label font-semibold text-muted-foreground">Status:</span>
+              <span className={`details-value font-bold capitalize ${getStatusColor()}`}>{pass.status}</span>
 
-                    <span className="details-label font-semibold text-muted-foreground">Type:</span>
-                    <span className="details-value capitalize">{pass.type}</span>
+              <span className="details-label font-semibold text-muted-foreground">Type:</span>
+              <span className="details-value capitalize">{pass.type}</span>
 
-                    {pass.type === "standard" && (
-                        <>
-                            <span className="details-label font-semibold text-muted-foreground">Owner:</span>
-                            <span className="details-value">{pass.ownerName}</span>
-                            <span className="details-label font-semibold text-muted-foreground">Company:</span>
-                            <span className="details-value">{pass.ownerCompany}</span>
-                        </>
-                    )}
+              {pass.type === "standard" && (
+                <>
+                  <span className="details-label font-semibold text-muted-foreground">Owner:</span>
+                  <span className="details-value">{pass.ownerName}</span>
+                  <span className="details-label font-semibold text-muted-foreground">Company:</span>
+                  <span className="details-value">{pass.ownerCompany}</span>
+                </>
+              )}
 
-                    {pass.type === "visitor" && (
-                         <>
-                            <span className="details-label font-semibold text-muted-foreground">Visitor:</span>
-                            <span className="details-value">{pass.visitorName}</span>
-                            <span className="details-label font-semibold text-muted-foreground">Purpose:</span>
-                            <span className="details-value">{pass.purpose}</span>
-                        </>
-                    )}
+              {pass.type === "visitor" && (
+                <>
+                  <span className="details-label font-semibold text-muted-foreground">Visitor:</span>
+                  <span className="details-value">{pass.visitorName}</span>
+                  <span className="details-label font-semibold text-muted-foreground">Purpose:</span>
+                  <span className="details-value">{pass.purpose}</span>
+                </>
+              )}
 
-                    <span className="details-label font-semibold text-muted-foreground">Expires:</span>
-                    <span className="details-value" style={{textTransform: 'none'}}>{format(getPassDate(pass.expiresAt), "PPP, p")}</span>
-                </div>
-
-                <div ref={cardRef} className="mt-6 flex justify-center p-2">
-                    <QrCodeDisplay payload={pass.qrPayload} />
-                </div>
+              <span className="details-label font-semibold text-muted-foreground">Expires:</span>
+              <span className="details-value" style={{textTransform: 'none'}}>{format(getPassDate(pass.expiresAt), "PPP, p")}</span>
             </div>
+
+            <div ref={cardRef} className="mt-6 flex justify-center p-2">
+              <QrCodeDisplay payload={pass.qrPayload} />
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="sm:justify-between">
           <div className="flex items-center gap-2">
-             <Button variant="outline" size="icon" onClick={handleShare}>
-                <Share2 className="h-4 w-4" />
-                <span className="sr-only">Share</span>
+            <Button variant="outline" size="icon" onClick={handleShare}>
+              <Share2 className="h-4 w-4" />
+              <span className="sr-only">Share</span>
             </Button>
             <Button variant="outline" size="icon" onClick={handleDownload}>
-                <Download className="h-4 w-4" />
-                 <span className="sr-only">Download</span>
+              <Download className="h-4 w-4" />
+              <span className="sr-only">Download</span>
             </Button>
           </div>
           <div className="flex items-center gap-2 mt-4 sm:mt-0">
-             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-             <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" />Print</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" />Print</Button>
           </div>
         </DialogFooter>
       </DialogContent>
