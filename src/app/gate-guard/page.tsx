@@ -1,7 +1,7 @@
-﻿"use client";
-import { ErrorBoundary } from '@/components/error-boundary/error-boundary';
-import { ShieldCheck, QrCode, Download, WifiOff, Wifi, RefreshCw } from 'lucide-react';
-import ManualSearch from '@/components/verifier/manual-search-offline';
+"use client";
+
+import { ShieldCheck, QrCode, Download } from 'lucide-react';
+import ManualSearch from '@/components/verifier/manual-search';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import QrScanner from '@/components/verifier/qr-scanner';
 import { Button } from '@/components/ui/button';
@@ -15,67 +15,32 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState, useEffect } from 'react';
-import { getPassById } from '@/lib/local-db';
-import { initializeSyncManager, syncPassesFromFirebase, hasLocalData } from '@/lib/sync-manager';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firestore';
+import Head from 'next/head';
 
 export default function GateGuardPage() {
-  return (
-    <ErrorBoundary>
-      <GateGuardContent />
-    </ErrorBoundary>
-  );
-}
-
-function GateGuardContent() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannedPass, setScannedPass] = useState<any>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
 
-  const [isOnline, setIsOnline] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncCount, setLastSyncCount] = useState(0);
-  const [hasData, setHasData] = useState(false);
-
-  useEffect(() => {
-    hasLocalData().then(hasData => {
-      setHasData(hasData);
-      if (!hasData && navigator.onLine) {
-        handleManualSync();
-      }
-    });
-
-    initializeSyncManager((result) => {
-      if (result.success) {
-        setLastSyncCount(result.passCount);
-        setHasData(true);
-      }
-      setIsSyncing(false);
-    });
-
-    setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
+  // Register service worker on component mount
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then((registration) => console.log('Service Worker registered:', registration))
-          .catch((error) => console.log('Service Worker registration failed:', error));
+          .then((registration) => {
+            console.log('Service Worker registered successfully:', registration);
+          })
+          .catch((error) => {
+            console.log('Service Worker registration failed:', error);
+          });
       });
     }
 
+    // Listen for install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -83,37 +48,29 @@ function GateGuardContent() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
+
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') console.log('User accepted the install prompt');
+    
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    }
+    
     setDeferredPrompt(null);
     setShowInstallButton(false);
   };
 
-  const handleManualSync = async () => {
-    if (!navigator.onLine) {
-      alert('Cannot sync while offline. Please connect to the internet and try again.');
-      return;
-    }
-    setIsSyncing(true);
-    const result = await syncPassesFromFirebase();
-    if (result.success) {
-      setLastSyncCount(result.passCount);
-      setHasData(true);
-      alert(`Successfully synced ${result.passCount} passes from the server.`);
-    } else {
-      alert(`Sync failed: ${result.error}`);
-    }
-    setIsSyncing(false);
-  };
-
   const handleScanSuccess = async (decodedText: string) => {
     if (isValidating || scannedPass) return;
+
     console.log("Processing scanned QR:", decodedText);
     setIsValidating(true);
     setIsScannerOpen(false);
@@ -121,15 +78,27 @@ function GateGuardContent() {
     try {
       const qrData = JSON.parse(decodedText);
       console.log("Parsed QR data:", qrData);
-      if (!qrData.pid || !qrData.v) throw new Error("Invalid QR code format");
-      
-      console.log("Searching local database for pass:", qrData.pid);
-      const passData = await getPassById(qrData.pid);
-      if (!passData) throw new Error("Pass not found in local database");
+
+      if (!qrData.pid || !qrData.v) {
+        throw new Error("Invalid QR code format");
+      }
+
+      const passRef = doc(db, 'passes', qrData.pid);
+      const passSnap = await getDoc(passRef);
+
+      if (!passSnap.exists()) {
+        throw new Error("Pass not found");
+      }
+
+      const passData = passSnap.data();
+      console.log("Pass data from Firestore:", passData);
 
       const now = Date.now() / 1000;
-      if (qrData.exp && qrData.exp < now) passData.expired = true;
-      setScannedPass({ id: qrData.pid, ...passData });
+      if (qrData.exp && qrData.exp < now) {
+        passData.expired = true;
+      }
+
+      setScannedPass({ id: passSnap.id, ...passData });
     } catch (error: any) {
       console.error("Validation error:", error);
       alert(`Scan failed: ${error.message}`);
@@ -139,108 +108,103 @@ function GateGuardContent() {
   };
 
   return (
-    <div className="bg-secondary/30 min-h-screen">
-      <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-7 w-7 text-primary" />
-            <span className="font-headline text-xl font-bold">Guardian Gate Guard</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <div className="flex items-center gap-1 text-green-600 text-sm">
-                <Wifi className="h-4 w-4" />
-                <span className="hidden sm:inline">Online</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-orange-600 text-sm">
-                <WifiOff className="h-4 w-4" />
-                <span className="hidden sm:inline">Offline</span>
-              </div>
-            )}
-            {isOnline && (
-              <Button onClick={handleManualSync} size="sm" variant="outline" disabled={isSyncing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Sync</span>
-              </Button>
-            )}
+    <>
+      <Head>
+        <meta name="application-name" content="Guardian Gate Guard" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Gate Guard" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#22c55e" />
+        
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </Head>
+
+      <div className="bg-secondary/30 min-h-screen">
+        <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0">
+          <div className="container mx-auto flex h-16 items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-7 w-7 text-primary" />
+              <span className="font-headline text-xl font-bold">Guardian Gate Guard</span>
+            </div>
             {showInstallButton && (
               <Button onClick={handleInstallClick} size="sm" variant="outline">
                 <Download className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Install</span>
+                Install App
               </Button>
             )}
           </div>
-        </div>
-      </header>
-      <main className="container mx-auto p-4 md:p-8">
-        <div className="mx-auto max-w-2xl space-y-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold font-headline tracking-tight">Pass Verifier</h1>
-            <p className="text-muted-foreground mt-2">
-              Enter a vehicle's plate number or scan a QR code to verify its access status.
-            </p>
-            {!hasData && (
-              <p className="text-orange-600 mt-2 text-sm">
-                No passes stored locally. {isOnline ? 'Click Sync to download pass database.' : 'Connect to internet to download pass database.'}
+        </header>
+
+        <main className="container mx-auto p-4 md:p-8">
+          <div className="mx-auto max-w-2xl space-y-8">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold font-headline tracking-tight">Pass Verifier</h1>
+              <p className="text-muted-foreground mt-2">
+                Enter a vehicle's plate number or scan a QR code to verify its access status.
               </p>
-            )}
-            {hasData && lastSyncCount > 0 && (
-              <p className="text-green-600 mt-2 text-sm">{lastSyncCount} passes available offline</p>
-            )}
-          </div>
-          <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Verification Result</DialogTitle>
-                <DialogDescription>Pass validation complete</DialogDescription>
-              </DialogHeader>
-              {scannedPass && <PassDetails pass={scannedPass} />}
-            </DialogContent>
-          </Dialog>
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Plate Search</CardTitle>
-              <CardDescription>Enter the plate letters and numbers separately.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ManualSearch />
-            </CardContent>
-          </Card>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-secondary/30 px-2 text-muted-foreground">Or</span>
+
+            <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Verification Result</DialogTitle>
+                  <DialogDescription>Pass validation complete</DialogDescription>
+                </DialogHeader>
+                {scannedPass && <PassDetails pass={scannedPass} />}
+              </DialogContent>
+            </Dialog>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Manual Plate Search</CardTitle>
+                <CardDescription>Enter the plate letters and numbers separately.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ManualSearch />
+              </CardContent>
+            </Card>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-secondary/30 px-2 text-muted-foreground">Or</span>
+              </div>
             </div>
+
+            <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="w-full">
+                  <QrCode className="mr-2 h-5 w-5" />
+                  Scan QR Code
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <QrCode className="h-5 w-5" /> Scan QR Code
+                  </DialogTitle>
+                  <DialogDescription>
+                    Use your device's camera to scan the pass QR code.
+                  </DialogDescription>
+                </DialogHeader>
+                {isValidating ? (
+                  <div className="text-center py-8">Validating pass...</div>
+                ) : (
+                  <QrScanner
+                    onScanSuccess={handleScanSuccess}
+                    onScanError={(error) => console.error("Scanner error:", error)}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
-          <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="w-full">
-                <QrCode className="mr-2 h-5 w-5" />
-                Scan QR Code
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <QrCode className="h-5 w-5" /> Scan QR Code
-                </DialogTitle>
-                <DialogDescription>Use your device's camera to scan the pass QR code.</DialogDescription>
-              </DialogHeader>
-              {isValidating ? (
-                <div className="text-center py-8">Validating pass...</div>
-              ) : (
-                <QrScanner
-                  onScanSuccess={handleScanSuccess}
-                  onScanError={(error) => console.error("Scanner error:", error)}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 }
