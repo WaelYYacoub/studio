@@ -17,7 +17,6 @@ import {
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firestore';
-import Head from 'next/head';
 
 export default function GateGuardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -108,103 +107,88 @@ export default function GateGuardPage() {
   };
 
   return (
-    <>
-      <Head>
-        <meta name="application-name" content="Guardian Gate Guard" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Gate Guard" />
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#22c55e" />
-        
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-      </Head>
+    <div className="bg-secondary/30 min-h-screen">
+      <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-7 w-7 text-primary" />
+            <span className="font-headline text-xl font-bold">Guardian Gate Guard</span>
+          </div>
+          {showInstallButton && (
+            <Button onClick={handleInstallClick} size="sm" variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Install App
+            </Button>
+          )}
+        </div>
+      </header>
 
-      <div className="bg-secondary/30 min-h-screen">
-        <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0">
-          <div className="container mx-auto flex h-16 items-center justify-between px-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-7 w-7 text-primary" />
-              <span className="font-headline text-xl font-bold">Guardian Gate Guard</span>
+      <main className="container mx-auto p-4 md:p-8">
+        <div className="mx-auto max-w-2xl space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold font-headline tracking-tight">Pass Verifier</h1>
+            <p className="text-muted-foreground mt-2">
+              Enter a vehicle's plate number or scan a QR code to verify its access status.
+            </p>
+          </div>
+
+          <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Verification Result</DialogTitle>
+                <DialogDescription>Pass validation complete</DialogDescription>
+              </DialogHeader>
+              {scannedPass && <PassDetails pass={scannedPass} />}
+            </DialogContent>
+          </Dialog>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Manual Plate Search</CardTitle>
+              <CardDescription>Enter the plate letters and numbers separately.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ManualSearch />
+            </CardContent>
+          </Card>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
             </div>
-            {showInstallButton && (
-              <Button onClick={handleInstallClick} size="sm" variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Install App
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-secondary/30 px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="w-full">
+                <QrCode className="mr-2 h-5 w-5" />
+                Scan QR Code
               </Button>
-            )}
-          </div>
-        </header>
-
-        <main className="container mx-auto p-4 md:p-8">
-          <div className="mx-auto max-w-2xl space-y-8">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold font-headline tracking-tight">Pass Verifier</h1>
-              <p className="text-muted-foreground mt-2">
-                Enter a vehicle's plate number or scan a QR code to verify its access status.
-              </p>
-            </div>
-
-            <Dialog open={!!scannedPass} onOpenChange={(open) => !open && setScannedPass(null)}>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Verification Result</DialogTitle>
-                  <DialogDescription>Pass validation complete</DialogDescription>
-                </DialogHeader>
-                {scannedPass && <PassDetails pass={scannedPass} />}
-              </DialogContent>
-            </Dialog>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Manual Plate Search</CardTitle>
-                <CardDescription>Enter the plate letters and numbers separately.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ManualSearch />
-              </CardContent>
-            </Card>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-secondary/30 px-2 text-muted-foreground">Or</span>
-              </div>
-            </div>
-
-            <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="w-full">
-                  <QrCode className="mr-2 h-5 w-5" />
-                  Scan QR Code
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <QrCode className="h-5 w-5" /> Scan QR Code
-                  </DialogTitle>
-                  <DialogDescription>
-                    Use your device's camera to scan the pass QR code.
-                  </DialogDescription>
-                </DialogHeader>
-                {isValidating ? (
-                  <div className="text-center py-8">Validating pass...</div>
-                ) : (
-                  <QrScanner
-                    onScanSuccess={handleScanSuccess}
-                    onScanError={(error) => console.error("Scanner error:", error)}
-                  />
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-        </main>
-      </div>
-    </>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5" /> Scan QR Code
+                </DialogTitle>
+                <DialogDescription>
+                  Use your device's camera to scan the pass QR code.
+                </DialogDescription>
+              </DialogHeader>
+              {isValidating ? (
+                <div className="text-center py-8">Validating pass...</div>
+              ) : (
+                <QrScanner
+                  onScanSuccess={handleScanSuccess}
+                  onScanError={(error) => console.error("Scanner error:", error)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
+    </div>
   );
 }
